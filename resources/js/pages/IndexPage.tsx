@@ -146,7 +146,7 @@ export default function IndexPage() {
     }, []);
 
     useEffect(() => {
-        document.title = "Inquiry Portal"; // Ensure the title is set correctly
+        document.title = "Inquiry & Waitlist Portal"; // Ensure the title is set correctly
     }, []);
 
     return (
