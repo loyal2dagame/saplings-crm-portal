@@ -18,7 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->validateCsrfTokens(except: [
             '/process-inquiry', // Exclude this route from CSRF protection
-            '/process-waitlist', // Exclude this route from CSRF protection
+            '/process-waitlist', // Exclude this route from CSRF protection second
         ]);
 
         $middleware->web(append: [
