@@ -1,18 +1,24 @@
 #!/usr/bin/env php
 <?php
 
-use Illuminate\Foundation\Application;
-use Symfony\Component\Console\Input\ArgvInput;
+use Illuminate\Contracts\Console\Kernel;
 
-define('LARAVEL_START', microtime(true));
+require_once __DIR__.'/vendor/autoload.php';
 
-// Register the Composer autoloader...
-require __DIR__.'/vendor/autoload.php';
-
-// Bootstrap Laravel and handle the command...
-/** @var Application $app */
 $app = require_once __DIR__.'/bootstrap/app.php';
 
-$status = $app->handleCommand(new ArgvInput);
+// Debugging: Check if the application resolves the Kernel binding
+try {
+    $kernel = $app->make(Kernel::class);
+} catch (Exception $e) {
+    dd('Error resolving Kernel:', $e->getMessage());
+}
+
+$status = $kernel->handle(
+    $input = new Symfony\Component\Console\Input\ArgvInput,
+    new Symfony\Component\Console\Output\ConsoleOutput
+);
+
+$kernel->terminate($input, $status);
 
 exit($status);

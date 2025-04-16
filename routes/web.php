@@ -19,5 +19,11 @@ Route::post('/waitlist', [FormController::class, 'handleWaitlist']);
 Route::match(['get', 'post'], '/process-inquiry', [FormController::class, 'processInquiry'])->name('inquiry.process');
 Route::post('/process-waitlist', [FormController::class, 'processWaitlist'])->name('process.waitlist');
 
+Route::get('/waitlist/update/{contactId}', [\App\Http\Controllers\WaitlistController::class, 'edit']);
+Route::post('/waitlist/update/{contactId}', [\App\Http\Controllers\WaitlistController::class, 'update']);
+Route::post('/waitlist/opt-out/{contactId}', [\App\Http\Controllers\WaitlistController::class, 'optOut']);
+
+Route::get('/test-email', [\App\Http\Controllers\TestEmailController::class, 'sendTestEmail']);
+
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
