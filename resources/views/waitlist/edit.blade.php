@@ -99,93 +99,84 @@
         <h1 style="text-align: center; margin-bottom: 20px;">Update Your Waitlist Information</h1>
         <div class="action-buttons">
             <p>Or</p>
-            <form method="POST" action="/waitlist/opt-out/{{ $contactId }}" style="display: inline;">
+            <form method="POST" action="/waitlist/opt-out/{{ $opportunityId }}" style="display: inline;">
                 @csrf
                 <button type="submit" class="btn-danger">Remove Me From The List</button>
             </form>
         </div>
-        <form method="POST" action="/waitlist/update/{{ $contactId }}">
+        <form method="POST" action="{{ route('waitlist.update', ['opportunityId' => $opportunityId]) }}">
             @csrf
-            <div class="form-group">
-                <label for="firstName">First Name:</label>
-                <input type="text" id="firstName" name="firstName" value="{{ $data['firstName'] }}" required>
+            <input type="hidden" name="opportunity_id" value="{{ $opportunityId }}">
+
+            <div>
+                <label for="first_name">First Name</label>
+                <input type="text" id="first_name" name="first_name" value="{{ $customFields['First Name'] ?? '' }}" required>
             </div>
-            <div class="form-group">
-                <label for="lastName">Last Name:</label>
-                <input type="text" id="lastName" name="lastName" value="{{ $data['lastName'] }}" required>
+
+            <div>
+                <label for="last_name">Last Name</label>
+                <input type="text" id="last_name" name="last_name" value="{{ $customFields['Last Name'] ?? '' }}" required>
             </div>
-            <div class="form-group">
-                <label for="relationship">Relationship:</label>
-                <select id="relationship" name="relationship" required>
-                    @foreach (['Mother', 'Father', 'Grandmother', 'Grandfather', 'Guardian', 'Joint Custody', 'Other'] as $option)
-                        <option value="{{ $option }}" {{ $option === ($data['relationship'] ?? '') ? 'selected' : '' }}>{{ $option }}</option>
-                    @endforeach
-                </select>
+
+            <div>
+                <label for="relationship">Relationship</label>
+                <input type="text" id="relationship" name="relationship" value="{{ $customFields['Relationship'] ?? '' }}" required>
             </div>
-            <div class="form-group">
-                <label for="email">Email:</label>
-                <input type="email" id="email" name="email" value="{{ $data['email'] }}" required>
+
+            <div>
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" value="{{ $customFields['Email'] ?? '' }}" required>
             </div>
-            <div class="form-group">
-                <label for="phone">Phone:</label>
-                <input type="text" id="phone" name="phone" value="{{ $data['phone'] }}" required>
+
+            <div>
+                <label for="phone">Phone</label>
+                <input type="text" id="phone" name="phone" value="{{ $customFields['Phone'] ?? '' }}" required>
             </div>
-            <div class="form-group">
-                <label for="location">Location:</label>
-                <select id="location" name="location" required>
-                    <option value="Mill Street" {{ $data['location'] === 'Mill Street' ? 'selected' : '' }}>Mill Street</option>
-                    <option value="Third Street" {{ $data['location'] === 'Third Street' ? 'selected' : '' }}>Third Street</option>
-                </select>
+
+            <div>
+                <label for="comment">Comment</label>
+                <textarea id="comment" name="comment">{{ $customFields['Comment'] ?? '' }}</textarea>
             </div>
-            <div class="form-group">
-                <label for="hearAboutUs">How did you hear about us?</label>
-                <select id="hearAboutUs" name="hearAboutUs" required>
-                    @foreach (['Referral from Another Parent', 'Referral from a Staff Member', 'Referral from Community Partner', 'Internet Search', 'Road Sign', 'Other'] as $option)
-                        <option value="{{ $option }}" {{ $option === ($data['hearAboutUs'] ?? '') ? 'selected' : '' }}>{{ $option }}</option>
-                    @endforeach
-                </select>
+
+            <div>
+                <label for="location">Location</label>
+                <input type="text" id="location" name="location" value="{{ $customFields['Location'] ?? '' }}" required>
             </div>
-            @if (isset($data['hearAboutUs']) && ($data['hearAboutUs'] === 'Referral from Community Partner' || $data['hearAboutUs'] === 'Other'))
-                <div class="form-group">
-                    <label for="additionalInfo">Please Specify:</label>
-                    <input type="text" id="additionalInfo" name="additionalInfo" value="{{ $data['additionalInfo'] ?? '' }}">
+
+            <div>
+                <label for="hear_about_us">How did you hear about us?</label>
+                <input type="text" id="hear_about_us" name="hear_about_us" value="{{ $customFields['How did you hear about us?'] ?? '' }}">
+            </div>
+
+            <div class="child-section">
+                <h3>Child Information</h3>
+                <div>
+                    <label for="child_first_name">Child First Name</label>
+                    <input type="text" id="child_first_name" name="children[0][first_name]" value="{{ $customFields['Child First Name'] ?? '' }}" required>
                 </div>
-            @endif
-            <h2>Children</h2>
-            @foreach ($data['children'] as $index => $child)
-                <div class="child-section">
-                    <h3>Child {{ $index + 1 }}</h3>
-                    <div class="form-group">
-                        <label for="children[{{ $index }}][firstName]">First Name:</label>
-                        <input type="text" id="children[{{ $index }}][firstName]" name="children[{{ $index }}][firstName]" value="{{ $child['firstName'] }}" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="children[{{ $index }}][lastName]">Last Name:</label>
-                        <input type="text" id="children[{{ $index }}][lastName]" name="children[{{ $index }}][lastName]" value="{{ $child['lastName'] }}" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="children[{{ $index }}][dob]">Date of Birth:</label>
-                        <input type="date" id="children[{{ $index }}][dob]" name="children[{{ $index }}][dob]" value="{{ $child['dob'] }}" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="children[{{ $index }}][gender]">Gender:</label>
-                        <select id="children[{{ $index }}][gender]" name="children[{{ $index }}][gender]" required>
-                            <option value="Male" {{ $child['gender'] === 'Male' ? 'selected' : '' }}>Male</option>
-                            <option value="Female" {{ $child['gender'] === 'Female' ? 'selected' : '' }}>Female</option>
-                            <option value="Other" {{ $child['gender'] === 'Other' ? 'selected' : '' }}>Other</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="children[{{ $index }}][startDate]">Requested Start Date:</label>
-                        <input type="date" id="children[{{ $index }}][startDate]" name="children[{{ $index }}][startDate]" value="{{ $child['startDate'] }}" required>
-                    </div>
+
+                <div>
+                    <label for="child_last_name">Child Last Name</label>
+                    <input type="text" id="child_last_name" name="children[0][last_name]" value="{{ $customFields['Child Last Name'] ?? '' }}" required>
                 </div>
-            @endforeach
-            <div class="form-group">
-                <label for="comment">Comment:</label>
-                <textarea id="comment" name="comment" rows="4" maxlength="500">{{ $data['comment'] ?? '' }}</textarea>
+
+                <div>
+                    <label for="child_dob">Child DOB</label>
+                    <input type="date" id="child_dob" name="children[0][dob]" value="{{ $customFields['Child DOB'] ?? '' }}" required>
+                </div>
+
+                <div>
+                    <label for="child_gender">Child Gender</label>
+                    <input type="text" id="child_gender" name="children[0][gender]" value="{{ $customFields['Child Gender'] ?? '' }}" required>
+                </div>
+
+                <div>
+                    <label for="child_start_date">Requested Start Date</label>
+                    <input type="date" id="child_start_date" name="children[0][start_date]" value="{{ $customFields['Requested Start Date'] ?? '' }}" required>
+                </div>
             </div>
-            <button type="submit" class="btn-primary">Save Changes</button>
+
+            <button type="submit">Update Waitlist</button>
         </form>
     </div>
 </body>

@@ -340,37 +340,13 @@ class FormController extends Controller
             throw new \Exception("Failed to add contact: " . $contactXmlResponse->ErrorText);
         }
 
-        $contactId = (string) $contactXmlResponse->Contacts->Contact->ContactID;
+        $opportunityId = (string) $contactXmlResponse->Contacts->Contact->OpportunityID;
 
-        // Add each child as an opportunity
-        foreach ($validated['children'] as $child) {
-            $opportunityXml = "<AddOpportunitiesRequest>
-                <Opportunities>
-                    <Opportunity>
-                        <Title>{$child['first_name']} {$child['last_name']}</Title>
-                        <ContactID>{$contactId}</ContactID>
-                        <CloseDate>20260101</CloseDate>
-                        <CustomFields>
-                            <CustomField fieldname=\"Child DOB\">{$child['dob']}</CustomField>
-                            <CustomField fieldname=\"Child Gender\">{$child['gender']}</CustomField>
-                        </CustomFields>
-                    </Opportunity>
-                </Opportunities>
-            </AddOpportunitiesRequest>";
-
-            $opportunityResponse = Http::withOptions(['verify' => false])->asForm()->post('https://api.greenrope.com/api2', [
-                'email' => $this->apiUsername,
-                'auth_token' => $token,
-                'xml' => $opportunityXml,
-            ]);
-
-            $opportunityXmlResponse = simplexml_load_string($opportunityResponse->body());
-            if ($opportunityXmlResponse->Result != 'Success') {
-                throw new \Exception("Failed to add opportunity: " . $opportunityXmlResponse->ErrorText);
-            }
-        }
-
-        return response()->json(['message' => 'Waitlist submitted successfully']);
+        // Pass the opportunityId to the view
+        return view('waitlist.edit', [
+            'opportunityId' => $opportunityId,
+            // ...other data...
+        ]);
     }
 
     public function processWaitlist(Request $request)
@@ -430,7 +406,8 @@ class FormController extends Controller
                     </Contacts>
                 </AddContactsRequest>";
 
-                Log::info('Generated AddContactsRequest XML:', ['xml' => $addContactsXml]);
+                // Log the XML request for debugging
+                Log::info('AddContactsRequest XML:', ['xml' => $addContactsXml]);
 
                 // Send AddContactsRequest
                 $addContactsResponse = Http::withOptions(['verify' => false])->asForm()->post('https://api.stgi.net/xml.pl', [
@@ -461,8 +438,6 @@ class FormController extends Controller
                         Log::error('Failed to add contact:', ['response' => $addContactsResponse->body()]);
                         return response()->json(['error' => 'Failed to add contact: ' . $errorText], 500);
                     }
-                } else {
-                    $contactId = (string) $addContactsXmlResponse->Contacts->Contact->Contact_id;
                 }
 
                 // Add opportunities for each child
@@ -482,7 +457,6 @@ class FormController extends Controller
                         <Opportunities>
                             <Opportunity>
                                 <Title>{$childFirstName} {$childLastName}</Title>
-                                <ContactID>{$contactId}</ContactID>
                                 <Notes>Child DOB: {$childDob}, Gender: {$childGender}</Notes>
                                 <OpportunityValue>1</OpportunityValue>
                                 <PercentWin>50</PercentWin>
@@ -493,7 +467,8 @@ class FormController extends Controller
                         </Opportunities>
                     </AddOpportunitiesRequest>";
 
-                    Log::info('Generated AddOpportunitiesRequest XML for child:', ['xml' => $addOpportunitiesXml]);
+                    // Log the XML request for debugging
+                    Log::info('AddOpportunitiesRequest XML:', ['xml' => $addOpportunitiesXml]);
 
                     // Send AddOpportunitiesRequest
                     $addOpportunitiesResponse = Http::withOptions(['verify' => false])->asForm()->post('https://api.stgi.net/xml.pl', [
@@ -515,10 +490,15 @@ class FormController extends Controller
                         Log::error('Failed to create opportunity for child:', ['response' => $addOpportunitiesResponse->body()]);
                         return response()->json(['error' => 'Failed to create opportunity: ' . ($addOpportunitiesXmlResponse->Opportunities->Opportunity->ErrorText ?? 'Unknown error')], 500);
                     }
+
+                    $opportunityId = (string) $addOpportunitiesXmlResponse->Opportunities->Opportunity->OpportunityID;
                 }
 
-                // Return success response
-                return response()->json(['message' => 'Waitlist and opportunities submitted successfully.']);
+                // Pass the opportunityId to the view
+                return view('waitlist.edit', [
+                    'opportunityId' => $opportunityId,
+                    // ...other data...
+                ]);
             } catch (\Exception $e) {
                 Log::error('Error in processWaitlist:', ['exception' => $e->getMessage()]);
                 return response()->json(['error' => 'An error occurred: ' . $e->getMessage()], 500);
