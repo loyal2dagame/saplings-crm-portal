@@ -87,11 +87,23 @@ class WaitlistController extends Controller
                 return redirect('/')->with('error', 'Failed to fetch all opportunities: ' . $allOpportunitiesXmlResponse->ErrorText);
             }
 
+            $children = [];
+            foreach ($allOpportunitiesXmlResponse->Opportunities->Opportunity as $opportunity) {
+                $notes = (string) $opportunity->Notes;
+                preg_match('/Child DOB: ([\d-]+), Gender: (\w+)/', $notes, $matches);
+
+                $children[] = [
+                    'firstName' => (string) $opportunity->Title,
+                    'dob' => $matches[1] ?? '',
+                    'gender' => $matches[2] ?? '',
+                ];
+            }
+
             // Pass all necessary data to the view
             return view('waitlist.edit', [
                 'opportunityId' => $opportunityId,
                 'opportunity' => $opportunityXmlResponse->Opportunities->Opportunity,
-                'allOpportunities' => $allOpportunitiesXmlResponse->Opportunities,
+                'children' => $children,
             ]);
         } catch (\Exception $e) {
             Log::error('Error fetching opportunity:', ['exception' => $e->getMessage()]);

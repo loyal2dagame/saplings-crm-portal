@@ -26,5 +26,7 @@ Route::post('/waitlist/opt-out/{contactId}', [\App\Http\Controllers\WaitlistCont
 
 Route::get('/update-waitlist', [WaitlistController::class, 'edit'])->name('waitlist.edit');
 
+// Route::get('/get-custom-fields', [FormController::class, 'getCustomFields']);
+
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

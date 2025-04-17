@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button, Typography, Box, TextField, MenuItem, IconButton, Snackbar, Alert, AlertColor } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaplingsLogo from '/public/images/Saplings_Logo_Linear_For_White.svg';
@@ -54,17 +54,27 @@ export default function IndexPage() {
 
     // State for waitlist form
     const [waitlistForm, setWaitlistForm] = useState({
-        firstName: '',
-        lastName: '',
-        relationship: '',
-        email: '',
-        phone: '',
-        comment: '',
-        location: '',
-        hearAboutUs: '',
+        firstName: 'John', // Pre-filled for testing
+        lastName: 'Doe', // Pre-filled for testing
+        relationship: 'Father', // Pre-filled for testing
+        email: '', // Leave empty for unique input
+        phone: '1234567890', // Pre-filled for testing
+        comment: 'This is a test comment.', // Pre-filled for testing
+        location: 'Mill Street', // Pre-filled for testing
+        hearAboutUs: 'Internet Search', // Pre-filled for testing,
     });
 
-    const [children, setChildren] = useState([{ id: 1, firstName: '', lastName: '', dob: '', gender: '', startDate: '' }]);
+    const [children, setChildren] = useState([
+        {
+            id: 1,
+            firstName: 'ChildFirstName', // Pre-filled for testing
+            lastName: 'ChildLastName', // Pre-filled for testing
+            dob: '2020-01-01', // Pre-filled for testing
+            gender: 'Male', // Pre-filled for testing
+            startDate: '2023-12-01', // Pre-filled for testing
+        },
+    ]);
+
     const [additionalInfo, setAdditionalInfo] = useState(''); // State for additional input field
 
     const addChild = () => {
@@ -128,14 +138,19 @@ export default function IndexPage() {
         }
     };
 
+    const inquiryButtonRef = useRef<HTMLButtonElement | null>(null); // Reference for inquiry button
+    const waitlistButtonRef = useRef<HTMLButtonElement | null>(null); // Reference for waitlist button
+
     const handleShowInquireForm = () => {
         setShowWaitlistForm(false);
         setShowInquireForm(true);
+        setTimeout(() => inquiryButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0); // Scroll to button
     };
 
     const handleShowWaitlistForm = () => {
         setShowInquireForm(false);
         setShowWaitlistForm(true);
+        setTimeout(() => waitlistButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0); // Scroll to button
     };
 
     useEffect(() => {
@@ -252,10 +267,20 @@ export default function IndexPage() {
                 </Box>
             </Box>
             <Box sx={{ display: 'flex', gap: 2, marginTop: 4 }}>
-                <Button variant="contained" onClick={handleShowInquireForm}>
+                <Button
+                    ref={inquiryButtonRef} // Attach reference to inquiry button
+                    variant="contained"
+                    onClick={handleShowInquireForm}
+                    sx={{ scrollMarginTop: '80px' }} // Add padding above when scrolled into view
+                >
                     Make An Inquiry
                 </Button>
-                <Button variant="contained" onClick={handleShowWaitlistForm}>
+                <Button
+                    ref={waitlistButtonRef} // Attach reference to waitlist button
+                    variant="contained"
+                    onClick={handleShowWaitlistForm}
+                    sx={{ scrollMarginTop: '80px' }} // Add padding above when scrolled into view
+                >
                     Join Our Waitlist
                 </Button>
             </Box>

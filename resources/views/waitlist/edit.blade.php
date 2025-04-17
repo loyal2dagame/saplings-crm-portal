@@ -148,33 +148,25 @@
                 <input type="text" id="hear_about_us" name="hear_about_us" value="{{ $customFields['How did you hear about us?'] ?? '' }}">
             </div>
 
-            <div class="child-section">
-                <h3>Child Information</h3>
-                <div>
-                    <label for="child_first_name">Child First Name</label>
-                    <input type="text" id="child_first_name" name="children[0][first_name]" value="{{ $customFields['Child First Name'] ?? '' }}" required>
-                </div>
+            @foreach ($children as $index => $child)
+                <div class="child-section">
+                    <h3>Child Information ({{ $index + 1 }})</h3>
+                    <div>
+                        <label for="children_{{ $index }}_first_name">Child First Name</label>
+                        <input type="text" id="children_{{ $index }}_first_name" name="children[{{ $index }}][first_name]" value="{{ $child['firstName'] }}" required>
+                    </div>
 
-                <div>
-                    <label for="child_last_name">Child Last Name</label>
-                    <input type="text" id="child_last_name" name="children[0][last_name]" value="{{ $customFields['Child Last Name'] ?? '' }}" required>
-                </div>
+                    <div>
+                        <label for="children_{{ $index }}_dob">Child DOB</label>
+                        <input type="date" id="children_{{ $index }}_dob" name="children[{{ $index }}][dob]" value="{{ $child['dob'] }}" required>
+                    </div>
 
-                <div>
-                    <label for="child_dob">Child DOB</label>
-                    <input type="date" id="child_dob" name="children[0][dob]" value="{{ $customFields['Child DOB'] ?? '' }}" required>
+                    <div>
+                        <label for="children_{{ $index }}_gender">Child Gender</label>
+                        <input type="text" id="children_{{ $index }}_gender" name="children[{{ $index }}][gender]" value="{{ $child['gender'] }}" required>
+                    </div>
                 </div>
-
-                <div>
-                    <label for="child_gender">Child Gender</label>
-                    <input type="text" id="child_gender" name="children[0][gender]" value="{{ $customFields['Child Gender'] ?? '' }}" required>
-                </div>
-
-                <div>
-                    <label for="child_start_date">Requested Start Date</label>
-                    <input type="date" id="child_start_date" name="children[0][start_date]" value="{{ $customFields['Requested Start Date'] ?? '' }}" required>
-                </div>
-            </div>
+            @endforeach
 
             <button type="submit">Update Waitlist</button>
         </form>
