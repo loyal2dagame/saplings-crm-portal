@@ -17,20 +17,37 @@ class FormController extends Controller
         $this->apiPassword = env('GREENROPE_PASSWORD');
     }
 
+    private function sendApiRequest($url, $payload)
+    {
+        try {
+            $response = Http::withOptions(['verify' => false])->asForm()->post($url, $payload);
+            return $response;
+        } catch (\Exception $e) {
+            throw $e;
+        }
+    }
+
     private function authenticate()
     {
-        $response = Http::withOptions(['verify' => false])->asForm()->post('https://api.greenrope.com/api2', [
-            'email' => $this->apiUsername,
-            'password' => $this->apiPassword,
-            'xml' => '<GetAuthTokenRequest></GetAuthTokenRequest>',
-        ]);
+        try {
+            $url = 'https://api.stgi.net/xml.pl';
+            $payload = [
+                'email' => $this->apiUsername,
+                'password' => $this->apiPassword,
+                'xml' => '<GetAuthTokenRequest></GetAuthTokenRequest>',
+            ];
 
-        $xml = simplexml_load_string($response->body());
-        if ($xml->Result == 'Success') {
-            return (string) $xml->Token;
+            $response = $this->sendApiRequest($url, $payload);
+
+            $xml = simplexml_load_string($response->body());
+            if ($xml->Result == 'Success') {
+                return (string) $xml->Token;
+            }
+
+            throw new \Exception("Authentication failed: " . ($xml->ErrorText ?? 'Unknown error'));
+        } catch (\Exception $e) {
+            throw $e;
         }
-
-        throw new \Exception("Authentication failed: " . $xml->ErrorText);
     }
 
     public function handleInquiry(Request $request)
@@ -42,7 +59,6 @@ class FormController extends Controller
             'inquiry' => 'required|string|max:1500',
         ]);
 
-        // Process inquiry (e.g., store in database or send email)
         return response()->json(['message' => 'Inquiry submitted successfully']);
     }
 
@@ -137,7 +153,7 @@ class FormController extends Controller
                             $addOpportunitiesXml = "<AddOpportunitiesRequest>
                                 <Opportunities>
                                     <Opportunity>
-                                        <Title>THIS IS A TEST</Title>
+                                        <Title>(P) {$firstName} {$lastName}</Title>
                                         <ContactID>{$contactId}</ContactID>
                                         <Notes>{$inquiry}</Notes>
                                         <Phase>New</Phase>
@@ -187,7 +203,7 @@ class FormController extends Controller
                 $addOpportunitiesXml = "<AddOpportunitiesRequest>
                     <Opportunities>
                         <Opportunity>
-                            <Title>THIS IS A TEST</Title>
+                            <Title>(P) {$firstName} {$lastName}</Title>
                             <ContactID>{$contactId}</ContactID>
                             <Notes>{$inquiry}</Notes>
                             <Phase>New</Phase>
@@ -275,7 +291,7 @@ class FormController extends Controller
             }
         }
 
-        return response('Hello World');
+        return response('Inquiry processed successfully');
     }
 
     /**
@@ -289,7 +305,6 @@ class FormController extends Controller
         libxml_use_internal_errors(true);
         $xml = simplexml_load_string($content);
         if ($xml === false) {
-            Log::error('Invalid XML:', ['errors' => libxml_get_errors()]);
             libxml_clear_errors();
             return false;
         }
@@ -317,7 +332,6 @@ class FormController extends Controller
 
         $token = $this->authenticate();
 
-        // Add parent as a contact
         $contactXml = "<AddContactsRequest>
             <Contacts>
                 <Contact>
@@ -340,37 +354,11 @@ class FormController extends Controller
             throw new \Exception("Failed to add contact: " . $contactXmlResponse->ErrorText);
         }
 
-        $contactId = (string) $contactXmlResponse->Contacts->Contact->ContactID;
+        $opportunityId = (string) $contactXmlResponse->Contacts->Contact->OpportunityID;
 
-        // Add each child as an opportunity
-        foreach ($validated['children'] as $child) {
-            $opportunityXml = "<AddOpportunitiesRequest>
-                <Opportunities>
-                    <Opportunity>
-                        <Title>{$child['first_name']} {$child['last_name']}</Title>
-                        <ContactID>{$contactId}</ContactID>
-                        <CloseDate>20260101</CloseDate>
-                        <CustomFields>
-                            <CustomField fieldname=\"Child DOB\">{$child['dob']}</CustomField>
-                            <CustomField fieldname=\"Child Gender\">{$child['gender']}</CustomField>
-                        </CustomFields>
-                    </Opportunity>
-                </Opportunities>
-            </AddOpportunitiesRequest>";
-
-            $opportunityResponse = Http::withOptions(['verify' => false])->asForm()->post('https://api.greenrope.com/api2', [
-                'email' => $this->apiUsername,
-                'auth_token' => $token,
-                'xml' => $opportunityXml,
-            ]);
-
-            $opportunityXmlResponse = simplexml_load_string($opportunityResponse->body());
-            if ($opportunityXmlResponse->Result != 'Success') {
-                throw new \Exception("Failed to add opportunity: " . $opportunityXmlResponse->ErrorText);
-            }
-        }
-
-        return response()->json(['message' => 'Waitlist submitted successfully']);
+        return view('waitlist.edit', [
+            'opportunityId' => $opportunityId,
+        ]);
     }
 
     public function processWaitlist(Request $request)
@@ -379,33 +367,19 @@ class FormController extends Controller
             $waitlistData = $request->all();
 
             try {
-                // Authenticate and get token
-                $authResponse = Http::withOptions(['verify' => false])->asForm()->post('https://api.stgi.net/xml.pl', [
-                    'email' => $this->apiUsername,
-                    'password' => $this->apiPassword,
-                    'xml' => '<GetAuthTokenRequest></GetAuthTokenRequest>',
-                ]);
+                $authToken = $this->authenticate();
 
-                Log::info('Auth Response:', ['body' => $authResponse->body()]);
-
-                if (!$this->isValidXml($authResponse->body())) {
-                    Log::error('Authentication failed: Non-XML response received.', ['response' => $authResponse->body()]);
-                    return response()->json(['error' => 'Authentication failed: Invalid response from GreenRope API.'], 500);
-                }
-
-                $authXml = simplexml_load_string($authResponse->body());
-                if ($authXml->Result != 'Success') {
-                    return response()->json(['error' => 'Authentication failed: ' . $authXml->ErrorText], 500);
-                }
-
-                $authToken = (string) $authXml->Token;
-
-                // Escape and validate special characters in waitlist data
                 $firstName = htmlspecialchars(trim($waitlistData['firstName']), ENT_XML1, 'UTF-8');
                 $lastName = htmlspecialchars(trim($waitlistData['lastName']), ENT_XML1, 'UTF-8');
                 $email = htmlspecialchars(trim($waitlistData['email']), ENT_XML1, 'UTF-8');
                 $phone = htmlspecialchars(trim($waitlistData['phone']), ENT_XML1, 'UTF-8');
                 $location = htmlspecialchars(trim($waitlistData['location']), ENT_XML1, 'UTF-8');
+                $relationship = htmlspecialchars(trim($waitlistData['relationship']), ENT_XML1, 'UTF-8');
+
+                $allowedRelationships = ['Mother', 'Father', 'Grandmother', 'Grandfather', 'Guardian', 'Joint Custody', 'Other'];
+                if (!in_array($relationship, $allowedRelationships)) {
+                    return response()->json(['error' => 'Invalid relationship selected.'], 400);
+                }
 
                 if ($location !== 'Mill Street' && $location !== 'Third Street') {
                     return response()->json(['error' => 'Invalid location selected.'], 400);
@@ -415,7 +389,6 @@ class FormController extends Controller
                     return response()->json(['error' => 'All fields are required and must be valid.'], 400);
                 }
 
-                // Prepare XML for AddContactsRequest
                 $addContactsXml = "<AddContactsRequest>
                     <Contacts>
                         <Contact>
@@ -426,105 +399,168 @@ class FormController extends Controller
                             <Groups>
                                 <Group>{$location}</Group>
                             </Groups>
+                            <UserDefinedFields>
+                                <UserDefinedField fieldname=\"relationship\">{$relationship}</UserDefinedField>
+                            </UserDefinedFields>
                         </Contact>
                     </Contacts>
                 </AddContactsRequest>";
 
-                Log::info('Generated AddContactsRequest XML:', ['xml' => $addContactsXml]);
-
-                // Send AddContactsRequest
                 $addContactsResponse = Http::withOptions(['verify' => false])->asForm()->post('https://api.stgi.net/xml.pl', [
                     'email' => $this->apiUsername,
                     'auth_token' => $authToken,
                     'xml' => $addContactsXml,
                 ]);
 
-                Log::info('AddContacts Response:', ['body' => $addContactsResponse->body()]);
-
                 if (!$this->isValidXml($addContactsResponse->body())) {
-                    Log::error('AddContacts failed: Non-XML response received.', ['response' => $addContactsResponse->body()]);
                     return response()->json(['error' => 'AddContacts failed: Invalid response from GreenRope API.'], 500);
                 }
 
                 $addContactsXmlResponse = simplexml_load_string($addContactsResponse->body());
                 if (strtolower((string) $addContactsXmlResponse->Contacts->Contact->Result) !== 'success') {
                     $errorText = (string) $addContactsXmlResponse->Contacts->Contact->ErrorText;
+
                     if (strpos($errorText, 'already exists') !== false) {
-                        // Extract the existing contact ID from the error message
                         preg_match('/ID (\d+)/', $errorText, $matches);
                         if (isset($matches[1])) {
                             $contactId = $matches[1];
                         } else {
-                            return response()->json(['error' => 'Failed to retrieve existing contact ID.'], 500);
+                            return response()->json(['error' => 'Failed to process waitlist: Unable to retrieve existing contact ID.'], 500);
                         }
                     } else {
-                        Log::error('Failed to add contact:', ['response' => $addContactsResponse->body()]);
                         return response()->json(['error' => 'Failed to add contact: ' . $errorText], 500);
                     }
                 } else {
                     $contactId = (string) $addContactsXmlResponse->Contacts->Contact->Contact_id;
                 }
 
-                // Add opportunities for each child
                 foreach ($waitlistData['children'] as $child) {
                     $childFirstName = htmlspecialchars(trim($child['firstName']), ENT_XML1, 'UTF-8');
                     $childLastName = htmlspecialchars(trim($child['lastName']), ENT_XML1, 'UTF-8');
                     $childDob = htmlspecialchars(trim($child['dob']), ENT_XML1, 'UTF-8');
-                    $childGender = htmlspecialchars(trim($child['gender']), ENT_XML1, 'UTF-8');
                     $childStartDate = htmlspecialchars(trim($child['startDate']), ENT_XML1, 'UTF-8');
+                    $comment = htmlspecialchars(trim($waitlistData['comment']), ENT_XML1, 'UTF-8');
+                    $hearAboutUs = htmlspecialchars(trim($waitlistData['hearAboutUs']), ENT_XML1, 'UTF-8');
 
-                    if (empty($childFirstName) || empty($childLastName) || empty($childDob) || empty($childGender) || empty($childStartDate)) {
+                    if (empty($childFirstName) || empty($childLastName) || empty($childDob) || empty($childStartDate)) {
                         return response()->json(['error' => 'All child fields are required and must be valid.'], 400);
                     }
 
-                    // Prepare XML for AddOpportunitiesRequest with PhaseID 17
                     $addOpportunitiesXml = "<AddOpportunitiesRequest>
                         <Opportunities>
                             <Opportunity>
                                 <Title>{$childFirstName} {$childLastName}</Title>
                                 <ContactID>{$contactId}</ContactID>
-                                <Notes>Child DOB: {$childDob}, Gender: {$childGender}</Notes>
+                                <Notes>{$comment}</Notes>
                                 <OpportunityValue>1</OpportunityValue>
                                 <PercentWin>50</PercentWin>
                                 <CloseDate>20260101</CloseDate>
                                 <Quality>A</Quality>
                                 <PhaseID>17</PhaseID>
+                                <CustomFields>
+                                    <CustomField fieldnum=\"1\">{$childFirstName}</CustomField>
+                                    <CustomField fieldnum=\"2\">{$childLastName}</CustomField>
+                                    <CustomField fieldnum=\"3\">{$childDob}</CustomField>
+                                    <CustomField fieldnum=\"4\">{$childStartDate}</CustomField>
+                                    <CustomField fieldnum=\"7\">{$hearAboutUs}</CustomField>
+                                </CustomFields>
                             </Opportunity>
                         </Opportunities>
                     </AddOpportunitiesRequest>";
 
-                    Log::info('Generated AddOpportunitiesRequest XML for child:', ['xml' => $addOpportunitiesXml]);
-
-                    // Send AddOpportunitiesRequest
                     $addOpportunitiesResponse = Http::withOptions(['verify' => false])->asForm()->post('https://api.stgi.net/xml.pl', [
                         'email' => $this->apiUsername,
                         'auth_token' => $authToken,
                         'xml' => $addOpportunitiesXml,
                     ]);
 
-                    Log::info('AddOpportunities Response for child:', ['body' => $addOpportunitiesResponse->body()]);
-
                     if (!$this->isValidXml($addOpportunitiesResponse->body())) {
-                        Log::error('AddOpportunities failed for child: Non-XML response received.', ['response' => $addOpportunitiesResponse->body()]);
-                        return response()->json(['error' => 'AddOpportunities failed: Invalid response from GreenRope API.'], 500);
+                        return response()->json(['error' => 'Failed to create opportunity: Internal server error from GreenRope API.'], 500);
                     }
 
                     $addOpportunitiesXmlResponse = simplexml_load_string($addOpportunitiesResponse->body());
-                    if (!isset($addOpportunitiesXmlResponse->Opportunities->Opportunity->Result) || 
+                    if (!isset($addOpportunitiesXmlResponse->Opportunities->Opportunity->Result) ||
                         strtolower((string) $addOpportunitiesXmlResponse->Opportunities->Opportunity->Result) !== 'success') {
-                        Log::error('Failed to create opportunity for child:', ['response' => $addOpportunitiesResponse->body()]);
                         return response()->json(['error' => 'Failed to create opportunity: ' . ($addOpportunitiesXmlResponse->Opportunities->Opportunity->ErrorText ?? 'Unknown error')], 500);
                     }
                 }
 
-                // Return success response
                 return response()->json(['message' => 'Waitlist and opportunities submitted successfully.']);
             } catch (\Exception $e) {
-                Log::error('Error in processWaitlist:', ['exception' => $e->getMessage()]);
                 return response()->json(['error' => 'An error occurred: ' . $e->getMessage()], 500);
             }
         }
 
         return response('Hello World');
+    }
+
+    public function getCustomFields(Request $request)
+    {
+        try {
+            $authToken = $this->authenticate();
+
+            $firstName = htmlspecialchars(trim($request->input('first_name')), ENT_XML1, 'UTF-8');
+            $lastName = htmlspecialchars(trim($request->input('last_name')), ENT_XML1, 'UTF-8');
+            $email = htmlspecialchars(trim($request->input('email')), ENT_XML1, 'UTF-8');
+
+            if (empty($firstName) && empty($lastName) && empty($email)) {
+                return response()->json(['error' => 'At least one filter (first_name, last_name, or email) is required.'], 400);
+            }
+
+            $getContactsXml = "<GetContactsRequest";
+            if (!empty($firstName)) {
+                $getContactsXml .= " firstname=\"{$firstName}\"";
+            }
+            if (!empty($lastName)) {
+                $getContactsXml .= " lastname=\"{$lastName}\"";
+            }
+            if (!empty($email)) {
+                $getContactsXml .= " email=\"{$email}\"";
+            }
+            $getContactsXml .= "></GetContactsRequest>";
+
+            $response = $this->sendApiRequest('https://api.stgi.net/xml.pl', [
+                'email' => $this->apiUsername,
+                'auth_token' => $authToken,
+                'xml' => $getContactsXml,
+            ]);
+
+            if (!mb_check_encoding($response->body(), 'UTF-8')) {
+                return response()->json(['error' => 'Failed to fetch contact: Invalid response encoding.'], 500);
+            }
+
+            if (!$this->isValidXml($response->body())) {
+                return response()->json(['error' => 'Failed to fetch contact: Invalid response from GreenRope API.'], 500);
+            }
+
+            $xmlResponse = simplexml_load_string($response->body());
+            if (strtolower((string) $xmlResponse->Result) !== 'success') {
+                return response()->json(['error' => 'Failed to fetch contact: ' . ($xmlResponse->ErrorText ?? 'Unknown error')], 500);
+            }
+
+            $contacts = $xmlResponse->Contacts->Contact ?? [];
+            $contactDetails = [];
+
+            foreach ($contacts as $contact) {
+                $userDefinedFields = $contact->UserDefinedFields->UserDefinedField ?? [];
+                $fields = [];
+
+                foreach ($userDefinedFields as $field) {
+                    $fields[] = [
+                        'FieldName' => (string) $field->FieldName,
+                        'FieldValue' => (string) ($field->FieldValue ?? ''),
+                    ];
+                }
+
+                $contactDetails[] = [
+                    'contact' => $contact,
+                    'user_defined_fields' => $fields,
+                ];
+            }
+
+            return response()->json($contactDetails);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'An error occurred: ' . $e->getMessage()], 500);
+        }
     }
 }

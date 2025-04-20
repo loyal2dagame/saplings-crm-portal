@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Button, Typography, Box, TextField, MenuItem, IconButton, Snackbar, Alert, AlertColor } from '@mui/material';
+import React, { useState, useEffect, useRef } from 'react';
+import { Button, Typography, Box, TextField, MenuItem, IconButton, Snackbar, Alert, AlertColor, CircularProgress } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaplingsLogo from '/public/images/Saplings_Logo_Linear_For_White.svg';
 
@@ -26,17 +26,24 @@ export default function IndexPage() {
         setSnackbar({ ...snackbar, open: false });
     };
 
+    const [isSubmittingInquiry, setIsSubmittingInquiry] = useState(false); // State to track inquiry submission status
+
     const handleSubmitInquiry = async (e: React.FormEvent) => {
         e.preventDefault(); // Prevent default form submission behavior
+        setIsSubmittingInquiry(true); // Disable the button and show loader
 
         try {
+            const payload = {
+                ...inquiryForm,
+            };
+
             const response = await fetch('/process-inquiry', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
-                body: JSON.stringify(inquiryForm),
+                body: JSON.stringify(payload), // Ensure the payload is sent as JSON
             });
 
             const data = await response.json();
@@ -45,27 +52,42 @@ export default function IndexPage() {
                 setInquiryForm({ firstName: '', lastName: '', email: '', inquiry: '', location: '' }); // Clear form
                 setShowInquireForm(false); // Close form
             } else {
+                console.error('Error response:', data); // Log error response for debugging
                 setSnackbar({ open: true, message: data.error || 'Failed to submit inquiry.', severity: 'error' });
             }
         } catch (error) {
+            console.error('Error occurred during inquiry submission:', error); // Log error details
             setSnackbar({ open: true, message: 'An error occurred while submitting the inquiry.', severity: 'error' });
+        } finally {
+            setIsSubmittingInquiry(false); // Re-enable the button
         }
     };
 
     // State for waitlist form
     const [waitlistForm, setWaitlistForm] = useState({
-        firstName: '',
-        lastName: '',
-        relationship: '',
-        email: '',
-        phone: '',
-        comment: '',
-        location: '',
-        hearAboutUs: '',
+        firstName: 'John', // Pre-filled for testing
+        lastName: 'Doe', // Pre-filled for testing
+        relationship: 'Father', // Pre-filled for testing
+        email: '', // Leave empty for unique input
+        phone: '1234567890', // Pre-filled for testing
+        comment: 'This is a test comment.', // Pre-filled for testing
+        location: 'Mill Street', // Pre-filled for testing
+        hearAboutUs: 'Internet Search', // Pre-filled for testing,
     });
 
-    const [children, setChildren] = useState([{ id: 1, firstName: '', lastName: '', dob: '', gender: '', startDate: '' }]);
+    const [children, setChildren] = useState([
+        {
+            id: 1,
+            firstName: 'ChildFirstName', // Pre-filled for testing
+            lastName: 'ChildLastName', // Pre-filled for testing
+            dob: '2020-01-01', // Pre-filled for testing
+            gender: 'Male', // Pre-filled for testing
+            startDate: '2023-12-01', // Pre-filled for testing
+        },
+    ]);
+
     const [additionalInfo, setAdditionalInfo] = useState(''); // State for additional input field
+    const [isSubmitting, setIsSubmitting] = useState(false); // State to track submission status
 
     const addChild = () => {
         setChildren([...children, { id: Date.now(), firstName: '', lastName: '', dob: '', gender: '', startDate: '' }]);
@@ -77,6 +99,7 @@ export default function IndexPage() {
 
     const handleSubmitWaitlist = async (e: React.FormEvent) => {
         e.preventDefault(); // Prevent default form submission behavior
+        setIsSubmitting(true); // Disable the button and show loader
 
         try {
             // Determine the group ID based on the selected location
@@ -93,6 +116,12 @@ export default function IndexPage() {
                 children,
                 groupId, // Include the group ID in the payload
                 additionalInfo, // Include additional info in the payload
+                customFields: [
+                    {
+                        fieldname: "How did you hear about us", // Removed the question mark
+                        value: waitlistForm.hearAboutUs,
+                    },
+                ],
             };
 
             const response = await fetch('/process-waitlist', {
@@ -125,17 +154,24 @@ export default function IndexPage() {
             }
         } catch (error) {
             setSnackbar({ open: true, message: 'An error occurred while submitting the waitlist.', severity: 'error' });
+        } finally {
+            setIsSubmitting(false); // Re-enable the button
         }
     };
+
+    const inquiryButtonRef = useRef<HTMLButtonElement | null>(null); // Reference for inquiry button
+    const waitlistButtonRef = useRef<HTMLButtonElement | null>(null); // Reference for waitlist button
 
     const handleShowInquireForm = () => {
         setShowWaitlistForm(false);
         setShowInquireForm(true);
+        setTimeout(() => inquiryButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0); // Scroll to button
     };
 
     const handleShowWaitlistForm = () => {
         setShowInquireForm(false);
         setShowWaitlistForm(true);
+        setTimeout(() => waitlistButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0); // Scroll to button
     };
 
     useEffect(() => {
@@ -147,6 +183,14 @@ export default function IndexPage() {
 
     useEffect(() => {
         document.title = "Inquiry & Waitlist Portal"; // Ensure the title is set correctly
+        console.log("Document title set to:", document.title); // Debug the title
+    }, []);
+
+    useEffect(() => {
+        setTimeout(() => {
+            document.title = "Inquiry & Waitlist Portal"; // Override any global title modifications
+            console.log("Final Document title set to:", document.title); // Debug the final title
+        }, 0);
     }, []);
 
     return (
@@ -252,10 +296,20 @@ export default function IndexPage() {
                 </Box>
             </Box>
             <Box sx={{ display: 'flex', gap: 2, marginTop: 4 }}>
-                <Button variant="contained" onClick={handleShowInquireForm}>
+                <Button
+                    ref={inquiryButtonRef} // Attach reference to inquiry button
+                    variant="contained"
+                    onClick={handleShowInquireForm}
+                    sx={{ scrollMarginTop: '80px' }} // Add padding above when scrolled into view
+                >
                     Make An Inquiry
                 </Button>
-                <Button variant="contained" onClick={handleShowWaitlistForm}>
+                <Button
+                    ref={waitlistButtonRef} // Attach reference to waitlist button
+                    variant="contained"
+                    onClick={handleShowWaitlistForm}
+                    sx={{ scrollMarginTop: '80px' }} // Add padding above when scrolled into view
+                >
                     Join Our Waitlist
                 </Button>
             </Box>
@@ -304,6 +358,9 @@ export default function IndexPage() {
                         value={inquiryForm.location || ''}
                         onChange={(e) => setInquiryForm({ ...inquiryForm, location: e.target.value })}
                     >
+                        <MenuItem value="" disabled>
+                            Select One
+                        </MenuItem>
                         <MenuItem value="Mill Street">Mill Street</MenuItem>
                         <MenuItem value="Third Street">Third Street</MenuItem>
                     </TextField>
@@ -319,8 +376,8 @@ export default function IndexPage() {
                         helperText={`${inquiryForm.inquiry.length}/1500 characters`}
                     />
                     <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                        <Button variant="contained" type="submit">
-                            Submit
+                        <Button variant="contained" type="submit" disabled={isSubmittingInquiry}>
+                            {isSubmittingInquiry ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Submit'}
                         </Button>
                         <Button
                             variant="outlined"
@@ -372,6 +429,9 @@ export default function IndexPage() {
                         value={waitlistForm.relationship}
                         onChange={(e) => setWaitlistForm({ ...waitlistForm, relationship: e.target.value })}
                     >
+                        <MenuItem value="" disabled>
+                            Select One
+                        </MenuItem>
                         {['Mother', 'Father', 'Grandmother', 'Grandfather', 'Guardian', 'Joint Custody', 'Other'].map((option) => (
                             <MenuItem key={option} value={option}>
                                 {option}
@@ -495,6 +555,9 @@ export default function IndexPage() {
                         value={waitlistForm.location}
                         onChange={(e) => setWaitlistForm({ ...waitlistForm, location: e.target.value })}
                     >
+                        <MenuItem value="" disabled>
+                            Select One
+                        </MenuItem>
                         {['Mill Street', 'Third Street'].map((option) => (
                             <MenuItem key={option} value={option}>
                                 {option}
@@ -514,6 +577,9 @@ export default function IndexPage() {
                             }
                         }}
                     >
+                        <MenuItem value="" disabled>
+                            Select One
+                        </MenuItem>
                         <MenuItem value="Referral from Another Parent">Referral from Another Parent</MenuItem>
                         <MenuItem value="Referral from a Staff Member">Referral from a Staff Member</MenuItem>
                         <MenuItem value="Referral from Community Partner">Referral from Community Partner</MenuItem>
@@ -546,8 +612,8 @@ export default function IndexPage() {
                         helperText={`${waitlistForm.comment.length}/500 characters`}
                     />
                     <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                        <Button variant="contained" type="submit">
-                            Submit
+                        <Button variant="contained" type="submit" disabled={isSubmitting}>
+                            {isSubmitting ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Submit'}
                         </Button>
                         <Button
                             variant="outlined"

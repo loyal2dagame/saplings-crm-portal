@@ -5,79 +5,118 @@
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
     <style>
         body {
-            font-family: 'Instrument Sans', sans-serif;
-            background-color: #DCF3FB;
+            font-family: 'Roboto', sans-serif;
+            background-color: #DCF2FB; /* Blue background */
             margin: 0;
             padding: 0;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
+            justify-content: flex-start;
             min-height: 100vh;
         }
+        .logo-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .logo-container img {
+            max-width: 150px;
+        }
         .container {
-            background-color: #fff;
-            padding: 20px;
+            width: 100%;
+            max-width: 500px; /* Narrower form width */
+            background-color: #FFFFFF; /* White form background */
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            max-width: 600px;
-            width: 100%;
-            margin: 20px;
+            padding: 20px;
+            box-sizing: border-box;
+            margin-top: 20px;
         }
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
         label {
             display: block;
-            font-weight: 600;
-            margin-bottom: 5px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #374151;
+            font-family: 'Roboto', sans-serif; /* Ensure consistent font across all elements */
         }
         input, select, textarea {
-            width: calc(100% - 20px);
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 14px;
+            width: 95%; /* Narrower field width */
+            padding: 12px;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            font-size: 16px;
+            color: #374151;
+            background-color: #F9FAFB;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+            font-family: 'Roboto', sans-serif; /* Ensure consistent font across all elements */
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: #2563EB;
+            outline: none;
         }
         textarea {
-            resize: none;
+            resize: vertical;
+        }
+        select[multiple] {
+            height: auto;
+            max-height: 200px;
+            overflow-y: auto;
         }
         button {
-            padding: 10px 15px;
+            display: inline-flex; /* Ensure button content aligns properly */
+            align-items: center;
+            justify-content: center;
+            padding: 12px 20px;
             border: none;
-            border-radius: 4px;
-            font-size: 14px;
+            border-radius: 6px;
+            font-size: 16px;
             cursor: pointer;
+            transition: background-color 0.2s, width 0.2s;
+            font-family: 'Roboto', sans-serif;
+            width: auto; /* Revert button width to auto */
         }
         .btn-primary {
-            background-color: #1976D2;
-            color: #fff;
+            background-color: #007bff; /* Blue color */
+            color: #FFFFFF;
+            border-color: #007bff;
         }
         .btn-primary:hover {
-            background-color: #1565C0;
+            background-color: #0056b3;
         }
         .btn-danger {
-            background-color: #D32F2F;
-            color: #fff;
+            background-color: #DC2626;
+            color: #FFFFFF;
         }
         .btn-danger:hover {
-            background-color: #C62828;
+            background-color: #B91C1C;
+        }
+        .spinner-border {
+            margin-left: 10px; /* Add spacing between text and spinner */
+            display: none; /* Hide spinner by default */
+        }
+        .loading .spinner-border {
+            display: inline-block; /* Show spinner when loading */
+        }
+        .loading #button-text {
+            visibility: hidden; /* Hide button text when loading */
         }
         .child-section {
+            margin-top: 30px; /* Increase padding above the child information box */
             margin-bottom: 20px;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            padding: 15px;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            background-color: #F3F4F6;
         }
         .child-section h3 {
             margin-top: 0;
-        }
-        .logo {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-        .logo img {
-            height: 100px;
+            font-size: 18px;
+            color: #374151;
+            font-family: 'Roboto', sans-serif; /* Ensure consistent font across all elements */
         }
         .action-buttons {
             text-align: center;
@@ -86,107 +125,139 @@
         .action-buttons p {
             margin: 10px 0;
             font-size: 16px;
-            font-weight: 600;
-            color: #555;
+            font-weight: 500;
+            color: #6B7280;
+            font-family: 'Roboto', sans-serif; /* Ensure consistent font across all elements */
+        }
+        h1 {
+            font-family: 'Roboto', sans-serif; /* Ensure consistent font across all elements */
+        }
+        .field-title {
+            margin-top: 15px; /* Add padding above the title */
         }
     </style>
 </head>
 <body>
+    <div class="logo-container">
+        <img src="{{ asset('images/Saplings_Logo_Linear_For_White.svg') }}" alt="Saplings Logo" style="max-width: none; width: 357px; height: 150px;"> <!-- Ensure logo is on blue background -->
+    </div>
     <div class="container">
-        <div class="logo">
-            <img src="{{ asset('images/Saplings_Logo_Linear_For_White.svg') }}" alt="Saplings Logo">
-        </div>
         <h1 style="text-align: center; margin-bottom: 20px;">Update Your Waitlist Information</h1>
         <div class="action-buttons">
             <p>Or</p>
-            <form method="POST" action="/waitlist/opt-out/{{ $contactId }}" style="display: inline;">
+            <form method="POST" action="/waitlist/opt-out/{{ $opportunityId }}" style="display: inline;">
                 @csrf
                 <button type="submit" class="btn-danger">Remove Me From The List</button>
             </form>
         </div>
-        <form method="POST" action="/waitlist/update/{{ $contactId }}">
+        <form method="POST" action="{{ route('waitlist.update', ['opportunityId' => $opportunityId]) }}" id="update-waitlist-form">
             @csrf
-            <div class="form-group">
-                <label for="firstName">First Name:</label>
-                <input type="text" id="firstName" name="firstName" value="{{ $data['firstName'] }}" required>
+            <input type="hidden" name="opportunity_id" value="{{ $opportunityId }}">
+
+            <div>
+                <label class="field-title" for="first_name">First Name</label>
+                <input type="text" id="first_name" name="first_name" value="{{ $formData['first_name'] ?? '' }}" required>
             </div>
-            <div class="form-group">
-                <label for="lastName">Last Name:</label>
-                <input type="text" id="lastName" name="lastName" value="{{ $data['lastName'] }}" required>
+
+            <div>
+                <label class="field-title" for="last_name">Last Name</label>
+                <input type="text" id="last_name" name="last_name" value="{{ $formData['last_name'] ?? '' }}" required>
             </div>
-            <div class="form-group">
-                <label for="relationship">Relationship:</label>
+
+            <div>
+                <label class="field-title" for="relationship">Relationship</label>
                 <select id="relationship" name="relationship" required>
-                    @foreach (['Mother', 'Father', 'Grandmother', 'Grandfather', 'Guardian', 'Joint Custody', 'Other'] as $option)
-                        <option value="{{ $option }}" {{ $option === ($data['relationship'] ?? '') ? 'selected' : '' }}>{{ $option }}</option>
+                    <option value="" disabled {{ empty($formData['relationship']) ? 'selected' : '' }}>Select One</option>
+                    @foreach(['Mother', 'Father', 'Grandmother', 'Grandfather', 'Guardian', 'Joint Custody', 'Other'] as $option)
+                        <option value="{{ $option }}" {{ (isset($formData['relationship']) && $formData['relationship'] === $option) ? 'selected' : '' }}>
+                            {{ $option }}
+                        </option>
                     @endforeach
                 </select>
             </div>
-            <div class="form-group">
-                <label for="email">Email:</label>
-                <input type="email" id="email" name="email" value="{{ $data['email'] }}" required>
+
+            <div>
+                <label class="field-title" for="email">Email</label>
+                <input type="email" id="email" name="email" value="{{ $formData['email'] ?? '' }}" readonly style="background-color: #e9ecef; cursor: not-allowed;">
             </div>
-            <div class="form-group">
-                <label for="phone">Phone:</label>
-                <input type="text" id="phone" name="phone" value="{{ $data['phone'] }}" required>
+
+            <div>
+                <label class="field-title" for="phone">Phone</label>
+                <input 
+                    type="text" 
+                    id="phone" 
+                    name="phone" 
+                    value="{{ $formData['phone'] ?? '' }}" 
+                    required 
+                    maxlength="11" 
+                    oninput="this.value = this.value.replace(/\D/g, '').slice(0, 11);" 
+                />
             </div>
-            <div class="form-group">
-                <label for="location">Location:</label>
-                <select id="location" name="location" required>
-                    <option value="Mill Street" {{ $data['location'] === 'Mill Street' ? 'selected' : '' }}>Mill Street</option>
-                    <option value="Third Street" {{ $data['location'] === 'Third Street' ? 'selected' : '' }}>Third Street</option>
+
+            <div>
+                <label class="field-title" for="comment">Comment</label>
+                <textarea id="comment" name="comment">{{ $formData['comment'] ?? '' }}</textarea>
+            </div>
+
+            <div>
+                <label class="field-title" for="location">Location</label>
+                <select id="location" name="location">
+                    <option value="Mill Street" {{ in_array('Mill Street', $formData['location']) ? 'selected' : '' }}>Mill Street, Acton</option>
+                    <option value="Third Street" {{ in_array('Third Street', $formData['location']) ? 'selected' : '' }}>Third Street, Orangeville</option>
                 </select>
             </div>
-            <div class="form-group">
-                <label for="hearAboutUs">How did you hear about us?</label>
-                <select id="hearAboutUs" name="hearAboutUs" required>
-                    @foreach (['Referral from Another Parent', 'Referral from a Staff Member', 'Referral from Community Partner', 'Internet Search', 'Road Sign', 'Other'] as $option)
-                        <option value="{{ $option }}" {{ $option === ($data['hearAboutUs'] ?? '') ? 'selected' : '' }}>{{ $option }}</option>
-                    @endforeach
-                </select>
+
+            <div>
+                <label class="field-title" for="hear_about_us">How did you hear about us?</label>
+                <input type="text" id="hear_about_us" name="hear_about_us" value="{{ $formData['hear_about_us'] ?? '' }}">
             </div>
-            @if (isset($data['hearAboutUs']) && ($data['hearAboutUs'] === 'Referral from Community Partner' || $data['hearAboutUs'] === 'Other'))
-                <div class="form-group">
-                    <label for="additionalInfo">Please Specify:</label>
-                    <input type="text" id="additionalInfo" name="additionalInfo" value="{{ $data['additionalInfo'] ?? '' }}">
-                </div>
-            @endif
-            <h2>Children</h2>
-            @foreach ($data['children'] as $index => $child)
+
+            @foreach ($children as $index => $child)
                 <div class="child-section">
-                    <h3>Child {{ $index + 1 }}</h3>
-                    <div class="form-group">
-                        <label for="children[{{ $index }}][firstName]">First Name:</label>
-                        <input type="text" id="children[{{ $index }}][firstName]" name="children[{{ $index }}][firstName]" value="{{ $child['firstName'] }}" required>
+                    <h3>Child Information ({{ $index + 1 }})</h3>
+                    <input type="hidden" name="children[{{ $index }}][opportunity_id]" value="{{ $child['opportunity_id'] }}">
+                    <div>
+                        <label class="field-title" for="children_{{ $index }}_first_name">Child First Name</label>
+                        <input type="text" id="children_{{ $index }}_first_name" name="children[{{ $index }}][first_name]" value="{{ $child['first_name'] }}" required>
                     </div>
-                    <div class="form-group">
-                        <label for="children[{{ $index }}][lastName]">Last Name:</label>
-                        <input type="text" id="children[{{ $index }}][lastName]" name="children[{{ $index }}][lastName]" value="{{ $child['lastName'] }}" required>
+                    <div>
+                        <label class="field-title" for="children_{{ $index }}_last_name">Child Last Name</label>
+                        <input type="text" id="children_{{ $index }}_last_name" name="children[{{ $index }}][last_name]" value="{{ $child['last_name'] }}" required>
                     </div>
-                    <div class="form-group">
-                        <label for="children[{{ $index }}][dob]">Date of Birth:</label>
-                        <input type="date" id="children[{{ $index }}][dob]" name="children[{{ $index }}][dob]" value="{{ $child['dob'] }}" required>
+                    <div>
+                        <label class="field-title" for="children_{{ $index }}_dob">Child DOB</label>
+                        <input type="date" id="children_{{ $index }}_dob" name="children[{{ $index }}][dob]" value="{{ $child['dob'] }}" required>
                     </div>
-                    <div class="form-group">
-                        <label for="children[{{ $index }}][gender]">Gender:</label>
-                        <select id="children[{{ $index }}][gender]" name="children[{{ $index }}][gender]" required>
-                            <option value="Male" {{ $child['gender'] === 'Male' ? 'selected' : '' }}>Male</option>
-                            <option value="Female" {{ $child['gender'] === 'Female' ? 'selected' : '' }}>Female</option>
-                            <option value="Other" {{ $child['gender'] === 'Other' ? 'selected' : '' }}>Other</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="children[{{ $index }}][startDate]">Requested Start Date:</label>
-                        <input type="date" id="children[{{ $index }}][startDate]" name="children[{{ $index }}][startDate]" value="{{ $child['startDate'] }}" required>
+                    <div>
+                        <label class="field-title" for="children_{{ $index }}_start_date">Requested Start Date</label>
+                        <input type="date" id="children_{{ $index }}_start_date" name="children[{{ $index }}][start_date]" value="{{ $child['start_date'] }}" required>
                     </div>
                 </div>
             @endforeach
-            <div class="form-group">
-                <label for="comment">Comment:</label>
-                <textarea id="comment" name="comment" rows="4" maxlength="500">{{ $data['comment'] ?? '' }}</textarea>
-            </div>
-            <button type="submit" class="btn-primary">Save Changes</button>
+
+            <button type="submit" class="btn-primary" id="update-waitlist-button">
+                <span id="button-text">Update Waitlist</span>
+                <span id="loading-spinner" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            </button>
         </form>
     </div>
+    <script>
+        document.getElementById('update-waitlist-form').addEventListener('submit', function (e) {
+            const button = document.getElementById('update-waitlist-button');
+            button.classList.add('loading'); // Add loading class to show spinner and hide text
+            button.disabled = true; // Disable the button after submission
+        });
+
+        document.getElementById('phone').addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, '').slice(0, 11); // Allow only digits and limit to 11 characters
+        });
+
+        document.querySelector('form').addEventListener('submit', function (e) {
+            const phoneInput = document.getElementById('phone');
+            if (phoneInput && !phoneInput.value.startsWith('+')) {
+                phoneInput.value = '+1' + phoneInput.value.trim(); // Prepend +1 if no country code exists
+            }
+        });
+    </script>
 </body>
 </html>
