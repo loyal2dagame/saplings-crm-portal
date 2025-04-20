@@ -26,8 +26,11 @@ export default function IndexPage() {
         setSnackbar({ ...snackbar, open: false });
     };
 
+    const [isSubmittingInquiry, setIsSubmittingInquiry] = useState(false); // State to track inquiry submission status
+
     const handleSubmitInquiry = async (e: React.FormEvent) => {
         e.preventDefault(); // Prevent default form submission behavior
+        setIsSubmittingInquiry(true); // Disable the button and show loader
 
         try {
             const payload = {
@@ -55,6 +58,8 @@ export default function IndexPage() {
         } catch (error) {
             console.error('Error occurred during inquiry submission:', error); // Log error details
             setSnackbar({ open: true, message: 'An error occurred while submitting the inquiry.', severity: 'error' });
+        } finally {
+            setIsSubmittingInquiry(false); // Re-enable the button
         }
     };
 
@@ -371,17 +376,9 @@ export default function IndexPage() {
                         helperText={`${inquiryForm.inquiry.length}/1500 characters`}
                     />
                     <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                        {/* <Button variant="contained" type="submit">
-                            Submit
-                        </Button> */}
-
-                        <Button variant="contained" type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Submit'}
+                        <Button variant="contained" type="submit" disabled={isSubmittingInquiry}>
+                            {isSubmittingInquiry ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Submit'}
                         </Button>
-
-
-
-
                         <Button
                             variant="outlined"
                             onClick={() => {
