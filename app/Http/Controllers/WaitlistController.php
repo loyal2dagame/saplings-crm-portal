@@ -19,7 +19,6 @@ class WaitlistController extends Controller
 
     public function edit($contactId)
     {
-        
         try {
             // Authenticate and get token
             $authToken = $this->authenticate();
@@ -59,9 +58,7 @@ class WaitlistController extends Controller
             ];
 
             // Step 2: Fetch contact details
-            $getContactXml = "<GetContactsRequest>
-                <ContactID>{$assignedToContactId}</ContactID>
-            </GetContactsRequest>";
+            $getContactXml = "<GetContactsRequest firstname=\"{$opportunity->AssignedToFirstname}\" lastname=\"{$opportunity->AssignedToLastname}\" email=\"{$opportunity->AssignedToEmail}\"></GetContactsRequest>";
             $contactResponse = Http::withOptions(['verify' => false])->asForm()->post('https://api.stgi.net/xml.pl', [
                 'email' => $this->apiUsername,
                 'auth_token' => $authToken,
@@ -122,6 +119,7 @@ class WaitlistController extends Controller
             $children = [];
             foreach ($opportunitiesXml->Opportunities->Opportunity as $childOpportunity) {
                 $children[] = [
+                    'opportunity_id' => (string) $childOpportunity->OpportunityID, // Add opportunity_id
                     'first_name' => (string) $childOpportunity->CustomFields->CustomField[0]->FieldValue,
                     'last_name' => (string) $childOpportunity->CustomFields->CustomField[1]->FieldValue,
                     'dob' => (string) $childOpportunity->CustomFields->CustomField[2]->FieldValue,
@@ -142,10 +140,112 @@ class WaitlistController extends Controller
         }
     }
 
-    public function update(Request $request, $contactId)
+    public function update(Request $request, $opportunityId)
     {
-        // Update the opportunity in GreenRope
-        return redirect()->back()->with('success', 'Information updated successfully.');
+        try {
+            // Authenticate and get token
+            $authToken = $this->authenticate();
+
+            // Step 1: Fetch opportunity details to get the associated contact_id
+            $getOpportunityXml = "<GetOpportunitiesRequest opportunity_id=\"{$opportunityId}\"></GetOpportunitiesRequest>";
+            $opportunityResponse = Http::withOptions(['verify' => false])->asForm()->post('https://api.stgi.net/xml.pl', [
+                'email' => $this->apiUsername,
+                'auth_token' => $authToken,
+                'xml' => $getOpportunityXml,
+            ]);
+
+            Log::info('GetOpportunities Response:', ['body' => $opportunityResponse->body()]);
+
+            if (!$this->isValidXml($opportunityResponse->body())) {
+                Log::error('Invalid XML response for GetOpportunitiesRequest.');
+                return redirect()->back()->withErrors(['error' => 'Failed to fetch opportunity details.']);
+            }
+
+            $opportunityXml = simplexml_load_string($opportunityResponse->body());
+            if (strtolower((string) $opportunityXml->Result) !== 'success' || empty($opportunityXml->Opportunities->Opportunity)) {
+                Log::error('Opportunity not found:', ['response' => $opportunityResponse->body()]);
+                return redirect()->back()->withErrors(['error' => 'Opportunity not found.']);
+            }
+
+            $contactId = (string) $opportunityXml->Opportunities->Opportunity->AssignedToContactID;
+
+            // Step 2: Fetch existing contact details
+            $getContactXml = "<GetContactsRequest contact_id=\"{$contactId}\"></GetContactsRequest>";
+            $contactResponse = Http::withOptions(['verify' => false])->asForm()->post('https://api.stgi.net/xml.pl', [
+                'email' => $this->apiUsername,
+                'auth_token' => $authToken,
+                'xml' => $getContactXml,
+            ]);
+
+            Log::info('GetContacts Response:', ['body' => $contactResponse->body()]);
+
+            if (!$this->isValidXml($contactResponse->body())) {
+                Log::error('Invalid XML response for GetContactsRequest.');
+                return redirect()->back()->withErrors(['error' => 'Failed to fetch contact details.']);
+            }
+
+            $contactXml = simplexml_load_string($contactResponse->body());
+            if (strtolower((string) $contactXml->Result) !== 'success' || empty($contactXml->Contacts->Contact)) {
+                Log::error('Contact not found:', ['response' => $contactResponse->body()]);
+                return redirect()->back()->withErrors(['error' => 'Contact not found.']);
+            }
+
+            $existingContact = $contactXml->Contacts->Contact;
+
+            // Compare existing data with new data
+            if (
+                (string) $existingContact->Firstname === $request->input('first_name') &&
+                (string) $existingContact->Lastname === $request->input('last_name') &&
+                (string) $existingContact->Email === $request->input('email') &&
+                (string) $existingContact->Phone === $request->input('phone') &&
+                (string) $existingContact->UserDefinedFields->UserDefinedField[0]->FieldValue === $request->input('relationship')
+            ) {
+                Log::info('No changes detected. Skipping update.');
+                return redirect()->back()->with('info', 'No changes were made.');
+            }
+
+            // Step 3: Update contact details using EditContactsRequest
+            $requestId = uniqid();
+            $editContactXml = "<EditContactsRequest>
+                <Contacts>
+                    <Contact contact_id=\"{$contactId}\" request_id=\"{$requestId}\">
+                        <Firstname>{$request->input('first_name')}</Firstname>
+                        <Lastname>{$request->input('last_name')}</Lastname>
+                        <Email>{$request->input('email')}</Email>
+                        <Phone>{$request->input('phone')}</Phone>
+                        <UserDefinedFields>
+                            <UserDefinedField fieldname=\"Relationship\">{$request->input('relationship')}</UserDefinedField>
+                        </UserDefinedFields>
+                    </Contact>
+                </Contacts>
+            </EditContactsRequest>";
+
+            Log::info('XML being sent for EditContactsRequest:', ['xml' => $editContactXml]);
+
+            $editResponse = Http::withOptions(['verify' => false])->asForm()->post('https://api.stgi.net/xml.pl', [
+                'email' => $this->apiUsername,
+                'auth_token' => $authToken,
+                'xml' => $editContactXml,
+            ]);
+
+            Log::info('EditContactsResponse:', ['body' => $editResponse->body()]);
+
+            if (!$this->isValidXml($editResponse->body())) {
+                Log::error('Invalid XML response for EditContactsRequest.');
+                return redirect()->back()->withErrors(['error' => 'Failed to update contact details.']);
+            }
+
+            $editXml = simplexml_load_string($editResponse->body());
+            if (strtolower((string) $editXml->Result) !== 'success') {
+                Log::error('Failed to update contact details:', ['response' => $editResponse->body()]);
+                return redirect()->back()->withErrors(['error' => 'Failed to update contact details.']);
+            }
+
+            return redirect()->back()->with('success', 'Contact updated successfully.');
+        } catch (\Exception $e) {
+            Log::error('Error in update method:', ['exception' => $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'An error occurred: ' . $e->getMessage()]);
+        }
     }
 
     public function optOut($contactId)
@@ -154,12 +254,7 @@ class WaitlistController extends Controller
         return redirect('/')->with('success', 'You have opted out of the waitlist.');
     }
 
-    /**
-     * Authenticate and get token.
-     *
-     * @return string
-     */
-    private function authenticate()
+    private function authenticate(): string
     {
         $authResponse = Http::withOptions(['verify' => false])->asForm()->post('https://api.stgi.net/xml.pl', [
             'email' => $this->apiUsername,
@@ -182,13 +277,7 @@ class WaitlistController extends Controller
         return (string) $authXml->Token;
     }
 
-    /**
-     * Check if a string is valid XML.
-     *
-     * @param string $content
-     * @return bool
-     */
-    private function isValidXml($content)
+    private function isValidXml($content): bool
     {
         libxml_use_internal_errors(true);
         $xml = simplexml_load_string($content);

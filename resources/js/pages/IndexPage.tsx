@@ -30,13 +30,17 @@ export default function IndexPage() {
         e.preventDefault(); // Prevent default form submission behavior
 
         try {
+            const payload = {
+                ...inquiryForm,
+            };
+
             const response = await fetch('/process-inquiry', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
-                body: JSON.stringify(inquiryForm),
+                body: JSON.stringify(payload), // Ensure the payload is sent as JSON
             });
 
             const data = await response.json();
@@ -45,9 +49,11 @@ export default function IndexPage() {
                 setInquiryForm({ firstName: '', lastName: '', email: '', inquiry: '', location: '' }); // Clear form
                 setShowInquireForm(false); // Close form
             } else {
+                console.error('Error response:', data); // Log error response for debugging
                 setSnackbar({ open: true, message: data.error || 'Failed to submit inquiry.', severity: 'error' });
             }
         } catch (error) {
+            console.error('Error occurred during inquiry submission:', error); // Log error details
             setSnackbar({ open: true, message: 'An error occurred while submitting the inquiry.', severity: 'error' });
         }
     };
@@ -172,6 +178,14 @@ export default function IndexPage() {
 
     useEffect(() => {
         document.title = "Inquiry & Waitlist Portal"; // Ensure the title is set correctly
+        console.log("Document title set to:", document.title); // Debug the title
+    }, []);
+
+    useEffect(() => {
+        setTimeout(() => {
+            document.title = "Inquiry & Waitlist Portal"; // Override any global title modifications
+            console.log("Final Document title set to:", document.title); // Debug the final title
+        }, 0);
     }, []);
 
     return (
@@ -357,9 +371,17 @@ export default function IndexPage() {
                         helperText={`${inquiryForm.inquiry.length}/1500 characters`}
                     />
                     <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                        <Button variant="contained" type="submit">
+                        {/* <Button variant="contained" type="submit">
                             Submit
+                        </Button> */}
+
+                        <Button variant="contained" type="submit" disabled={isSubmitting}>
+                            {isSubmitting ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Submit'}
                         </Button>
+
+
+
+
                         <Button
                             variant="outlined"
                             onClick={() => {

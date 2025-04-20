@@ -68,39 +68,230 @@ class FormController extends Controller
             $inquiryData = $request->all();
 
             try {
-                $authToken = $this->authenticate();
+                // Authenticate and get token
+                $authResponse = Http::withOptions(['verify' => false])->asForm()->post('https://api.stgi.net/xml.pl', [
+                    'email' => $this->apiUsername,
+                    'password' => $this->apiPassword,
+                    'xml' => '<GetAuthTokenRequest></GetAuthTokenRequest>',
+                ]);
 
+                Log::info('Auth Response:', ['body' => $authResponse->body()]);
+
+                if (!$this->isValidXml($authResponse->body())) {
+                    Log::error('Authentication failed: Non-XML response received.', ['response' => $authResponse->body()]);
+                    return response()->json(['error' => 'Authentication failed: Invalid response from GreenRope API.'], 500);
+                }
+
+                $authXml = simplexml_load_string($authResponse->body());
+                if ($authXml->Result != 'Success') {
+                    return response()->json(['error' => 'Authentication failed: ' . $authXml->ErrorText], 500);
+                }
+
+                $authToken = (string) $authXml->Token;
+
+                // Escape and validate special characters in inquiry data
+                $firstName = htmlspecialchars(trim($inquiryData['firstName']), ENT_XML1, 'UTF-8');
+                $lastName = htmlspecialchars(trim($inquiryData['lastName']), ENT_XML1, 'UTF-8');
+                $email = htmlspecialchars(trim($inquiryData['email']), ENT_XML1, 'UTF-8');
+                $inquiry = htmlspecialchars(trim($inquiryData['inquiry']), ENT_XML1, 'UTF-8');
+
+                if (empty($firstName) || empty($lastName) || empty($email) || empty($inquiry)) {
+                    return response()->json(['error' => 'All fields are required and must be valid.'], 400);
+                }
+
+                // Determine the group name based on the location
+                $groupName = null;
+                if ($inquiryData['location'] === 'Mill Street') {
+                    $groupName = 'Mill Street';
+                } elseif ($inquiryData['location'] === 'Third Street') {
+                    $groupName = 'Third Street';
+                }
+
+                // Prepare XML for AddContactsRequest
                 $addContactsXml = "<AddContactsRequest>
                     <Contacts>
                         <Contact>
-                            <Firstname>{$inquiryData['firstName']}</Firstname>
-                            <Lastname>{$inquiryData['lastName']}</Lastname>
-                            <Email>{$inquiryData['email']}</Email>
+                            <Firstname>{$firstName}</Firstname>
+                            <Lastname>{$lastName}</Lastname>
+                            <Email>{$email}</Email>
                             <Groups>
-                                <Group>{$inquiryData['location']}</Group>
+                                <Group>{$groupName}</Group>
                             </Groups>
                             <UserDefinedFields>
-                                <UserDefinedField fieldname=\"Inquiry\">{$inquiryData['inquiry']}</UserDefinedField>
+                                <UserDefinedField fieldname=\"Inquiry\">{$inquiry}</UserDefinedField>
                             </UserDefinedFields>
                         </Contact>
                     </Contacts>
                 </AddContactsRequest>";
 
-                $url = 'https://api.stgi.net/xml.pl';
-                $payload = [
+                Log::info('Generated AddContactsRequest XML:', ['xml' => $addContactsXml]);
+
+                // Send AddContactsRequest
+                $addContactsResponse = Http::withOptions(['verify' => false])->asForm()->post('https://api.stgi.net/xml.pl', [
                     'email' => $this->apiUsername,
                     'auth_token' => $authToken,
                     'xml' => $addContactsXml,
-                ];
+                ]);
 
-                $response = $this->sendApiRequest($url, $payload);
+                Log::info('AddContacts Response:', ['body' => $addContactsResponse->body()]);
 
+                if (!$this->isValidXml($addContactsResponse->body())) {
+                    Log::error('AddContacts failed: Non-XML response received.', ['response' => $addContactsResponse->body()]);
+                    return response()->json(['error' => 'AddContacts failed: Invalid response from GreenRope API.'], 500);
+                }
+
+                $addContactsXmlResponse = simplexml_load_string($addContactsResponse->body());
+                if (strtolower((string) $addContactsXmlResponse->Contacts->Contact->Result) !== 'success') {
+                    $errorText = (string) $addContactsXmlResponse->Contacts->Contact->ErrorText;
+                    if (strpos($errorText, 'already exists') !== false) {
+                        // Extract the existing contact ID from the error message
+                        preg_match('/ID (\d+)/', $errorText, $matches);
+                        if (isset($matches[1])) {
+                            $contactId = $matches[1];
+
+                            // Prepare XML for AddOpportunitiesRequest
+                            $addOpportunitiesXml = "<AddOpportunitiesRequest>
+                                <Opportunities>
+                                    <Opportunity>
+                                        <Title>(P) {$firstName} {$lastName}</Title>
+                                        <ContactID>{$contactId}</ContactID>
+                                        <Notes>{$inquiry}</Notes>
+                                        <Phase>New</Phase>
+                                        <OpportunityValue>0</OpportunityValue>
+                                        <PercentWin>50</PercentWin>
+                                        <CloseDate>20260101</CloseDate>
+                                        <Quality>A</Quality>
+                                    </Opportunity>
+                                </Opportunities>
+                            </AddOpportunitiesRequest>";
+
+                            Log::info('Generated AddOpportunitiesRequest XML for existing contact:', ['xml' => $addOpportunitiesXml]);
+
+                            // Send AddOpportunitiesRequest
+                            $addOpportunitiesResponse = Http::withOptions(['verify' => false])->asForm()->post('https://api.stgi.net/xml.pl', [
+                                'email' => $this->apiUsername,
+                                'auth_token' => $authToken,
+                                'xml' => $addOpportunitiesXml,
+                            ]);
+
+                            Log::info('AddOpportunities Response for existing contact:', ['body' => $addOpportunitiesResponse->body()]);
+
+                            if (!$this->isValidXml($addOpportunitiesResponse->body())) {
+                                Log::error('AddOpportunities failed for existing contact: Non-XML response received.', ['response' => $addOpportunitiesResponse->body()]);
+                                return response()->json(['error' => 'AddOpportunities failed: Invalid response from GreenRope API.'], 500);
+                            }
+
+                            $addOpportunitiesXmlResponse = simplexml_load_string($addOpportunitiesResponse->body());
+                            if (!isset($addOpportunitiesXmlResponse->Opportunities->Opportunity->Result) || 
+                                strtolower((string) $addOpportunitiesXmlResponse->Opportunities->Opportunity->Result) !== 'success') {
+                                Log::error('Failed to create opportunity for existing contact:', ['response' => $addOpportunitiesResponse->body()]);
+                                return response()->json(['error' => 'Failed to create opportunity: ' . ($addOpportunitiesXmlResponse->Opportunities->Opportunity->ErrorText ?? 'Unknown error')], 500);
+                            }
+
+                            // Return success response
+                            return response()->json(['message' => 'Inquiry and opportunity submitted successfully for existing contact.']);
+                        }
+                    }
+
+                    Log::error('Failed to add contact:', ['response' => $addContactsResponse->body()]);
+                    return response()->json(['error' => 'Failed to add contact: ' . $errorText], 500);
+                }
+
+                $contactId = (string) $addContactsXmlResponse->Contacts->Contact->Contact_id;
+
+                // Prepare XML for AddOpportunitiesRequest
+                $addOpportunitiesXml = "<AddOpportunitiesRequest>
+                    <Opportunities>
+                        <Opportunity>
+                            <Title>(P) {$firstName} {$lastName}</Title>
+                            <ContactID>{$contactId}</ContactID>
+                            <Notes>{$inquiry}</Notes>
+                            <Phase>New</Phase>
+                            <OpportunityValue>0</OpportunityValue>
+                            <PercentWin>50</PercentWin>
+                            <CloseDate>20260101</CloseDate>
+                            <Quality>A</Quality>
+                        </Opportunity>
+                    </Opportunities>
+                </AddOpportunitiesRequest>";
+
+                Log::info('Generated AddOpportunitiesRequest XML:', ['xml' => $addOpportunitiesXml]);
+
+                // Send AddOpportunitiesRequest
+                $addOpportunitiesResponse = Http::withOptions(['verify' => false])->asForm()->post('https://api.stgi.net/xml.pl', [
+                    'email' => $this->apiUsername,
+                    'auth_token' => $authToken,
+                    'xml' => $addOpportunitiesXml,
+                ]);
+
+                Log::info('AddOpportunities Response:', ['body' => $addOpportunitiesResponse->body()]);
+
+                if (!$this->isValidXml($addOpportunitiesResponse->body())) {
+                    Log::error('AddOpportunities failed: Non-XML response received.', ['response' => $addOpportunitiesResponse->body()]);
+                    return response()->json(['error' => 'AddOpportunities failed: Invalid response from GreenRope API.'], 500);
+                }
+
+                $addOpportunitiesXmlResponse = simplexml_load_string($addOpportunitiesResponse->body());
+
+                // Log the full response structure for debugging
+                Log::info('Parsed AddOpportunitiesResponse:', ['response' => json_encode($addOpportunitiesXmlResponse)]);
+
+                // Adjust success validation logic
+                if (!isset($addOpportunitiesXmlResponse->Opportunities->Opportunity->Result) || 
+                    strtolower((string) $addOpportunitiesXmlResponse->Opportunities->Opportunity->Result) !== 'success') {
+                    Log::error('Failed to create opportunity:', ['response' => $addOpportunitiesResponse->body()]);
+                    return response()->json(['error' => 'Failed to create opportunity: ' . ($addOpportunitiesXmlResponse->Opportunities->Opportunity->ErrorText ?? 'Unknown error')], 500);
+                }
+
+                // Prepare XML for GetGroupsRequest
+                $getGroupsXml = "<GetGroupsRequest></GetGroupsRequest>";
+
+                // Send GetGroupsRequest
+                $getGroupsResponse = Http::withOptions(['verify' => false])->asForm()->post('https://api.stgi.net/xml.pl', [
+                    'email' => $this->apiUsername,
+                    'auth_token' => $authToken,
+                    'xml' => $getGroupsXml,
+                ]);
+
+                Log::info('GetGroups Response:', ['body' => $getGroupsResponse->body()]);
+
+                if (!$this->isValidXml($getGroupsResponse->body())) {
+                    Log::error('GetGroups failed: Non-XML response received.', ['response' => $getGroupsResponse->body()]);
+                    return response()->json(['error' => 'GetGroups failed: Invalid response from GreenRope API.'], 500);
+                }
+
+                $getGroupsXmlResponse = simplexml_load_string($getGroupsResponse->body());
+                if (strtolower((string) $getGroupsXmlResponse->Result) !== 'success') {
+                    Log::error('Failed to fetch groups:', ['response' => $getGroupsResponse->body()]);
+                    return response()->json(['error' => 'Failed to fetch groups: ' . ($getGroupsXmlResponse->ErrorText ?? 'Unknown error')], 500);
+                }
+
+                // Parse groups from the response
+                $groups = [];
+                foreach ($getGroupsXmlResponse->Groups->Group as $group) {
+                    $groups[] = [
+                        'group_id' => (string) $group->Group_id,
+                        'name' => (string) $group->Name,
+                        'group_type' => (string) $group->Group_type,
+                        'emails_sent_from_name' => (string) $group->EmailsSentFromName,
+                        'emails_sent_from_email' => (string) $group->EmailsSentFromEmail,
+                        'email_physical_address' => (string) $group->EmailPhysicalAddress,
+                        'events_time_zone' => (string) $group->EventsTimeZone,
+                    ];
+                }
+
+                // Return success response with groups
+                return response()->json([
+                    'message' => 'Inquiry and opportunity submitted successfully to GreenRope',
+                    'groups' => $groups,
+                ]);
             } catch (\Exception $e) {
+                Log::error('Error in processInquiry:', ['exception' => $e->getMessage()]);
                 return response()->json(['error' => 'An error occurred: ' . $e->getMessage()], 500);
             }
         }
 
-        return response('Hello World');
+        return response('Inquiry processed successfully');
     }
 
     /**
