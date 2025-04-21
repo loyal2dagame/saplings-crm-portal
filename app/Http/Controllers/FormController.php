@@ -114,6 +114,7 @@ class FormController extends Controller
                             <Firstname>{$firstName}</Firstname>
                             <Lastname>{$lastName}</Lastname>
                             <Email>{$email}</Email>
+                            <Notes>{$inquiry}</Notes>
                             <Groups>
                                 <Group>{$groupName}</Group>
                             </Groups>
@@ -374,6 +375,7 @@ class FormController extends Controller
                 $email = htmlspecialchars(trim($waitlistData['email']), ENT_XML1, 'UTF-8');
                 $phone = htmlspecialchars(trim($waitlistData['phone']), ENT_XML1, 'UTF-8');
                 $location = htmlspecialchars(trim($waitlistData['location']), ENT_XML1, 'UTF-8');
+                $comment = htmlspecialchars(trim($waitlistData['comment']), ENT_XML1, 'UTF-8');
                 $relationship = htmlspecialchars(trim($waitlistData['relationship']), ENT_XML1, 'UTF-8');
 
                 $allowedRelationships = ['Mother', 'Father', 'Grandmother', 'Grandfather', 'Guardian', 'Joint Custody', 'Other'];
@@ -396,6 +398,7 @@ class FormController extends Controller
                             <Lastname>{$lastName}</Lastname>
                             <Email>{$email}</Email>
                             <Phone>{$phone}</Phone>
+                            <Notes>{$comment}</Notes>
                             <Groups>
                                 <Group>{$location}</Group>
                             </Groups>

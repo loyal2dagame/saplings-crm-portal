@@ -53,7 +53,6 @@ class WaitlistController extends Controller
                 'last_name' => (string) $opportunity->AssignedToLastname,
                 'email' => (string) $opportunity->AssignedToEmail,
                 'phone' => (string) $opportunity->AssignedToPhone,
-                'comment' => (string) $opportunity->Notes,
                 'hear_about_us' => isset($opportunity->CustomFields->CustomField[4]) && !empty($opportunity->CustomFields->CustomField[4]->FieldValue)
                     ? (string) $opportunity->CustomFields->CustomField[4]->FieldValue
                     : null, // Add null check for CustomField[4] and FieldValue
@@ -89,6 +88,9 @@ class WaitlistController extends Controller
                     $formData['relationship'] = isset($field->FieldValue) ? (string) $field->FieldValue : null; // Add null check
                 }
             }
+
+            // Set comment from contact notes
+            $formData['comment'] = (string) $contact->Notes;
 
             // Extract groups
             $formData['location'] = [];
@@ -213,6 +215,7 @@ class WaitlistController extends Controller
                 (string) $existingContact->Lastname === $request->input('last_name') &&
                 (string) $existingContact->Email === $request->input('email') &&
                 (string) $existingContact->Phone === $request->input('phone') &&
+                (string) $existingContact->Comment === $request->input('comment') &&
                 (string) $existingContact->UserDefinedFields->UserDefinedField[0]->FieldValue === $request->input('relationship')
             ) {
                 Log::info('No changes detected. Skipping update.');
@@ -228,6 +231,7 @@ class WaitlistController extends Controller
                         <Lastname>{$request->input('last_name')}</Lastname>
                         <Email>{$request->input('email')}</Email>
                         <Phone>{$request->input('phone')}</Phone>
+                        <Notes>{$request->input('comment')}</Notes>
                         <UserDefinedFields>
                             <UserDefinedField fieldname=\"Relationship\">{$request->input('relationship')}</UserDefinedField>
                         </UserDefinedFields>
