@@ -224,7 +224,15 @@
 
             <div>
                 <label class="field-title" for="hear_about_us">How did you hear about us?</label>
-                <input type="text" id="hear_about_us" name="hear_about_us" value="{{ $formData['hear_about_us'] ?? '' }}">
+                <select id="hear_about_us" name="hear_about_us" required disabled style="background-color: #e9ecef; cursor: not-allowed;">
+                    <option value="" disabled {{ empty($formData['hear_about_us']) ? 'selected' : '' }}>Select One</option>
+                    <option value="Referral from Another Parent" {{ (isset($formData['hear_about_us']) && $formData['hear_about_us'] === 'Referral from Another Parent') ? 'selected' : '' }}>Referral from Another Parent</option>
+                    <option value="Referral from a Staff Member" {{ (isset($formData['hear_about_us']) && $formData['hear_about_us'] === 'Referral from a Staff Member') ? 'selected' : '' }}>Referral from a Staff Member</option>
+                    <option value="Referral from Community Partner" {{ (isset($formData['hear_about_us']) && $formData['hear_about_us'] === 'Referral from Community Partner') ? 'selected' : '' }}>Referral from Community Partner</option>
+                    <option value="Internet Search" {{ (isset($formData['hear_about_us']) && $formData['hear_about_us'] === 'Internet Search') ? 'selected' : '' }}>Internet Search</option>
+                    <option value="Road Sign" {{ (isset($formData['hear_about_us']) && $formData['hear_about_us'] === 'Road Sign') ? 'selected' : '' }}>Road Sign</option>
+                    <option value="Other" {{ (isset($formData['hear_about_us']) && $formData['hear_about_us'] === 'Other') ? 'selected' : '' }}>Other</option>
+                </select>
             </div>
 
             @foreach ($children as $index => $child)
