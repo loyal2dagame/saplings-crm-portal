@@ -135,6 +135,21 @@
         .field-title {
             margin-top: 15px; /* Add padding above the title */
         }
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        .spinner-border {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 10; /* Ensure spinner is above other elements */
+        }
     </style>
 </head>
 <body>
@@ -235,17 +250,26 @@
                 </div>
             @endforeach
 
-            <button type="submit" class="btn-primary" id="update-waitlist-button">
+            <button type="submit" class="btn-primary" id="update-waitlist-button" style="min-width: 150px;">
                 <span id="button-text">Update Waitlist</span>
-                <span id="loading-spinner" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
             </button>
         </form>
     </div>
     <script>
+        let isSubmitting = false;
+
         document.getElementById('update-waitlist-form').addEventListener('submit', function (e) {
+            if (isSubmitting) {
+                e.preventDefault(); // Prevent multiple submissions
+                return;
+            }
+
             const button = document.getElementById('update-waitlist-button');
-            button.classList.add('loading'); // Add loading class to show spinner and hide text
-            button.disabled = true; // Disable the button after submission
+            const buttonText = document.getElementById('button-text');
+
+            isSubmitting = true; // Set submission state
+            button.disabled = true; // Disable the button
+            buttonText.textContent = 'Updating...'; // Change button text
         });
 
         document.getElementById('phone').addEventListener('input', function () {

@@ -54,7 +54,9 @@ class WaitlistController extends Controller
                 'email' => (string) $opportunity->AssignedToEmail,
                 'phone' => (string) $opportunity->AssignedToPhone,
                 'comment' => (string) $opportunity->Notes,
-                'hear_about_us' => (string) $opportunity->CustomFields->CustomField[4]->FieldValue, // Adjusted to fetch from opportunity
+                'hear_about_us' => isset($opportunity->CustomFields->CustomField[4]) && !empty($opportunity->CustomFields->CustomField[4]->FieldValue)
+                    ? (string) $opportunity->CustomFields->CustomField[4]->FieldValue
+                    : null, // Add null check for CustomField[4] and FieldValue
             ];
 
             // Step 2: Fetch contact details
@@ -84,7 +86,7 @@ class WaitlistController extends Controller
             foreach ($contact->UserDefinedFields->UserDefinedField as $field) {
                 $fieldName = strtolower(trim((string) $field->FieldName)); // Correctly access FieldName as an element
                 if ($fieldName === 'relationship') {
-                    $formData['relationship'] = (string) $field->FieldValue; // Access FieldValue for the value
+                    $formData['relationship'] = isset($field->FieldValue) ? (string) $field->FieldValue : null; // Add null check
                 }
             }
 
@@ -115,18 +117,31 @@ class WaitlistController extends Controller
                 return response()->json(['error' => 'Failed to fetch opportunities for contact.'], 500);
             }
 
+            // Log the structure of the XML for debugging
+            Log::info('Parsed Opportunities XML:', ['xml' => $opportunitiesXml]);
+
             // Extract child-related opportunities
             $children = [];
             foreach ($opportunitiesXml->Opportunities->Opportunity as $childOpportunity) {
                 $children[] = [
-                    'opportunity_id' => (string) $childOpportunity->OpportunityID, // Add opportunity_id
-                    'first_name' => (string) $childOpportunity->CustomFields->CustomField[0]->FieldValue,
-                    'last_name' => (string) $childOpportunity->CustomFields->CustomField[1]->FieldValue,
-                    'dob' => (string) $childOpportunity->CustomFields->CustomField[2]->FieldValue,
-                    'start_date' => (string) $childOpportunity->CustomFields->CustomField[3]->FieldValue,
+                    'opportunity_id' => (string) $childOpportunity->OpportunityID,
+                    'first_name' => isset($childOpportunity->CustomFields->CustomField[0]) && !empty($childOpportunity->CustomFields->CustomField[0]->FieldValue)
+                        ? (string) $childOpportunity->CustomFields->CustomField[0]->FieldValue
+                        : null, // Check if FieldValue is not empty
+                    'last_name' => isset($childOpportunity->CustomFields->CustomField[1]) && !empty($childOpportunity->CustomFields->CustomField[1]->FieldValue)
+                        ? (string) $childOpportunity->CustomFields->CustomField[1]->FieldValue
+                        : null, // Check if FieldValue is not empty
+                    'dob' => isset($childOpportunity->CustomFields->CustomField[2]) && !empty($childOpportunity->CustomFields->CustomField[2]->FieldValue)
+                        ? (string) $childOpportunity->CustomFields->CustomField[2]->FieldValue
+                        : null, // Check if FieldValue is not empty
+                    'start_date' => isset($childOpportunity->CustomFields->CustomField[3]) && !empty($childOpportunity->CustomFields->CustomField[3]->FieldValue)
+                        ? (string) $childOpportunity->CustomFields->CustomField[3]->FieldValue
+                        : null, // Check if FieldValue is not empty
                     'gender' => '', // Gender is not provided in the response; leave blank or handle separately
                 ];
             }
+            // Log the extracted children for debugging
+            Log::info('Extracted Children:', ['children' => $children]);
 
             // Pass data to the view
             return view('waitlist.edit', [
