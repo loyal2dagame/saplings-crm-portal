@@ -9,7 +9,7 @@ class Kernel extends ConsoleKernel
 {
     protected function schedule(Schedule $schedule)
     {
-        // Define scheduled tasks here
+        $schedule->command('waitlist:send-reminders')->everyFiveMinutes(); // Run every 5 minutes
     }
 
     protected function commands()
