@@ -216,10 +216,19 @@ class WaitlistController extends Controller
                 (string) $existingContact->Email === $request->input('email') &&
                 (string) $existingContact->Phone === $request->input('phone') &&
                 (string) $existingContact->Comment === $request->input('comment') &&
+                (string) $contactXml->Contacts->Contact->Groups->Group->Name === $request->input('location') &&
                 (string) $existingContact->UserDefinedFields->UserDefinedField[0]->FieldValue === $request->input('relationship')
             ) {
                 Log::info('No changes detected. Skipping update.');
                 return redirect()->back()->with('info', 'No changes were made.');
+            }
+
+            $existingLocation = $contactXml->Contacts->Contact->Groups->Group->Name ?? '';
+            $newLocation = $request->input('location', []);
+
+            $groupsXml = '';
+            foreach ((array) $newLocation as $location) {
+                $groupsXml .= "<Group>{$location}</Group>\n"; // Add newline after each group
             }
 
             // Step 3: Update contact details using EditContactsRequest
@@ -235,6 +244,9 @@ class WaitlistController extends Controller
                         <UserDefinedFields>
                             <UserDefinedField fieldname=\"Relationship\">{$request->input('relationship')}</UserDefinedField>
                         </UserDefinedFields>
+                        <Groups replace=\"true\">
+                            {$groupsXml} <!-- Ensure groups are properly formatted -->
+                        </Groups>
                     </Contact>
                 </Contacts>
             </EditContactsRequest>";
