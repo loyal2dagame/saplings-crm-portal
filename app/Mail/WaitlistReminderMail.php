@@ -15,7 +15,7 @@ class WaitlistReminderMail extends Mailable
 
     public function build()
     {
-        $url = url("/waitlist/update/{$this->contactId}");
+        $url = url("/waitlist/update/{$this->contactId}"); // $this->contactId is now hashed
         return $this->subject('Update Your Waitlist Information')
             ->view('emails.waitlist_reminder', ['url' => $url]);
     }

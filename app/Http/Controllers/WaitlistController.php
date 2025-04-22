@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Crypt;
 
 class WaitlistController extends Controller
 {
@@ -17,14 +18,16 @@ class WaitlistController extends Controller
         $this->apiPassword = env('GREENROPE_PASSWORD');
     }
 
-    public function edit($contactId)
+    public function edit($hashedOpportunityId)
     {
         try {
+            $opportunityId = Crypt::decryptString($hashedOpportunityId); // Decrypt the hashed ID
+
             // Authenticate and get token
             $authToken = $this->authenticate();
 
             // Step 1: Fetch opportunity details
-            $getOpportunityXml = "<GetOpportunitiesRequest opportunity_id=\"{$contactId}\"></GetOpportunitiesRequest>";
+            $getOpportunityXml = "<GetOpportunitiesRequest opportunity_id=\"{$opportunityId}\"></GetOpportunitiesRequest>";
             $opportunityResponse = Http::withOptions(['verify' => false])->asForm()->post('https://api.stgi.net/xml.pl', [
                 'email' => $this->apiUsername,
                 'auth_token' => $authToken,
@@ -147,13 +150,13 @@ class WaitlistController extends Controller
 
             // Pass data to the view
             return view('waitlist.edit', [
-                'opportunityId' => $contactId,
+                'opportunityId' => $opportunityId,
                 'formData' => $formData,
                 'children' => $children,
             ]);
         } catch (\Exception $e) {
-            Log::error('Error in edit method:', ['exception' => $e->getMessage()]);
-            return response()->json(['error' => 'An error occurred: ' . $e->getMessage()], 500);
+            Log::error('Invalid or tampered opportunity ID.', ['hashedOpportunityId' => $hashedOpportunityId]);
+            return redirect('/')->withErrors(['error' => 'Invalid link.']);
         }
     }
 

@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Crypt;
 
 class SendWaitlistReminder extends Command
 {
@@ -72,8 +73,11 @@ class SendWaitlistReminder extends Command
 
                 $processedContacts[] = $assignedToEmail; // Mark contact as processed
 
+                // Hash the opportunity ID
+                $hashedOpportunityId = Crypt::encryptString((string) $opportunity->OpportunityID);
+
                 // Send email
-                Mail::to($assignedToEmail)->send(new \App\Mail\WaitlistReminderMail((string) $opportunity->OpportunityID));
+                Mail::to($assignedToEmail)->send(new \App\Mail\WaitlistReminderMail($hashedOpportunityId)); // Pass hashed ID
                 Log::info('Email sent to:', ['email' => $assignedToEmail]); // Log email sent
             }
 

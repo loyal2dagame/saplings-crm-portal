@@ -23,7 +23,7 @@ Route::post('/process-waitlist', [FormController::class, 'processWaitlist'])->na
 
 Route::post('/process-inquiry', [FormController::class, 'processInquiry'])->name('inquiry.process');
 
-Route::get('/waitlist/update/{contactId}', [\App\Http\Controllers\WaitlistController::class, 'edit'])->name('waitlist.update');
+Route::get('/waitlist/update/{hashedOpportunityId}', [\App\Http\Controllers\WaitlistController::class, 'edit'])->name('waitlist.update');
 Route::post('/waitlist/update/{opportunityId}', [\App\Http\Controllers\WaitlistController::class, 'update'])->name('waitlist.update');
 Route::post('/waitlist/opt-out/{contactId}', [\App\Http\Controllers\WaitlistController::class, 'optOut']);
 
