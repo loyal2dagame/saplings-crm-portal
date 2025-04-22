@@ -254,13 +254,53 @@ class WaitlistController extends Controller
                 return redirect()->back()->withErrors(['error' => 'Failed to update contact details.']);
             }
 
-            $editXml = simplexml_load_string($editResponse->body());
-            if (strtolower((string) $editXml->Result) !== 'success') {
+            $editResponseXml = simplexml_load_string($editResponse->body());
+            if (strtolower((string) $editResponseXml->Contacts->Contact->Result) !== 'success') {
                 Log::error('Failed to update contact details:', ['response' => $editResponse->body()]);
                 return redirect()->back()->withErrors(['error' => 'Failed to update contact details.']);
             }
 
-            return redirect()->back()->with('success', 'Contact updated successfully.');
+            // Step 4: Update opportunities for each child
+            $children = $request->input('children', []);
+            foreach ($children as $child) {
+                $editOpportunityXml = "<EditOpportunitiesRequest>
+                    <Opportunities>
+                        <Opportunity opportunity_id=\"{$child['opportunity_id']}\">
+                            <Quality>A</Quality>
+                            <CloseDate>20260101</CloseDate>
+                            <CustomFields>
+                                <CustomField fieldnum=\"1\">{$child['first_name']}</CustomField>
+                                <CustomField fieldnum=\"2\">{$child['last_name']}</CustomField>
+                                <CustomField fieldnum=\"3\">{$child['dob']}</CustomField>
+                                <CustomField fieldnum=\"4\">{$child['start_date']}</CustomField>
+                            </CustomFields>
+                        </Opportunity>
+                    </Opportunities>
+                </EditOpportunitiesRequest>";
+
+                Log::info('XML being sent for EditOpportunitiesRequest:', ['xml' => $editOpportunityXml]);
+
+                $editOpportunityResponse = Http::withOptions(['verify' => false])->asForm()->post('https://api.stgi.net/xml.pl', [
+                    'email' => $this->apiUsername,
+                    'auth_token' => $authToken,
+                    'xml' => $editOpportunityXml,
+                ]);
+
+                Log::info('EditOpportunitiesResponse:', ['body' => $editOpportunityResponse->body()]);
+
+                if (!$this->isValidXml($editOpportunityResponse->body())) {
+                    Log::error('Invalid XML response for EditOpportunitiesRequest.');
+                    return redirect()->back()->withErrors(['error' => 'Failed to update opportunity details.']);
+                }
+
+                $editOpportunityXmlResponse = simplexml_load_string($editOpportunityResponse->body());
+                if (strtolower((string) $editOpportunityXmlResponse->Opportunities->Opportunity->Result) !== 'success') {
+                    Log::error('Failed to update opportunity details:', ['response' => $editOpportunityResponse->body()]);
+                    return redirect()->back()->withErrors(['error' => 'Failed to update opportunity details.']);
+                }
+            }
+
+            return redirect()->back()->with('success', 'Contact and opportunities updated successfully.');
         } catch (\Exception $e) {
             Log::error('Error in update method:', ['exception' => $e->getMessage()]);
             return redirect()->back()->withErrors(['error' => 'An error occurred: ' . $e->getMessage()]);
