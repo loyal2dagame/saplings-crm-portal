@@ -199,13 +199,12 @@
             <div>
                 <label class="field-title" for="phone">Phone</label>
                 <input 
-                    type="text" 
+                    type="tel" 
                     id="phone" 
                     name="phone" 
                     value="{{ $formData['phone'] ?? '' }}" 
                     required 
-                    maxlength="11" 
-                    oninput="this.value = this.value.replace(/\D/g, '').slice(0, 11);" 
+                    placeholder="(123) 456-7890"
                 />
             </div>
 
@@ -267,8 +266,21 @@
             buttonText.textContent = 'Updating...'; // Change button text
         });
 
-        document.getElementById('phone').addEventListener('input', function () {
-            this.value = this.value.replace(/\D/g, '').slice(0, 11); // Allow only digits and limit to 11 characters
+        document.getElementById('phone').addEventListener('input', function (e) {
+            let input = e.target.value.replace(/\D/g, ''); // Remove all non-digit characters
+            let formatted = '';
+
+            if (input.length > 0) {
+                formatted = '(' + input.substring(0, 3); // Add opening bracket for area code
+            }
+            if (input.length > 3) {
+                formatted += ') ' + input.substring(3, 6); // Add closing bracket and space
+            }
+            if (input.length > 6) {
+                formatted += '-' + input.substring(6, 10); // Add hyphen after the next three digits
+            }
+
+            e.target.value = formatted; // Update the input field with the formatted value
         });
 
         document.querySelector('form').addEventListener('submit', function (e) {
