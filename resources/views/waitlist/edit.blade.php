@@ -88,11 +88,16 @@
             background-color: #0056b3;
         }
         .btn-danger {
-            background-color: #DC2626;
+            background-color: #DC2626; /* Red color */
             color: #FFFFFF;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
         }
         .btn-danger:hover {
-            background-color: #B91C1C;
+            background-color: #B91C1C; /* Darker red on hover */
         }
         .spinner-border {
             margin-left: 10px; /* Add spacing between text and spinner */
@@ -150,6 +155,139 @@
             transform: translateY(-50%);
             z-index: 10; /* Ensure spinner is above other elements */
         }
+
+        /* Dialog Overlay */
+        .dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        /* Dialog Box */
+        .dialog-box {
+            background-color: #FFFFFF;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .dialog-box h2 {
+            margin-top: 0;
+            font-size: 24px;
+            color: #374151;
+        }
+
+        .dialog-box p {
+            font-size: 16px;
+            color: #6B7280;
+            margin-bottom: 20px;
+        }
+
+        /* Child List */
+        .child-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 20px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            background-color: #F9FAFB;
+        }
+
+        /* Child Row */
+        .child-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #E5E7EB;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .child-row:last-child {
+            border-bottom: none;
+        }
+
+        .child-row:hover {
+            background-color: #E5E7EB;
+        }
+
+        .child-row.selected {
+            background-color: #2563EB; /* Blue background */
+            color: #FFFFFF;
+        }
+
+        /* Child Name */
+        .child-name {
+            font-size: 16px;
+            color: inherit;
+            text-align: left;
+            flex-grow: 1;
+        }
+
+        /* Selection Indicator */
+        .selection-indicator {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #D1D5DB;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+
+        .child-row.selected .selection-indicator {
+            background-color: #DC2626; /* Red background */
+            border-color: #DC2626; /* Red border */
+        }
+
+        .child-row.selected .selection-indicator::before {
+            content: '✖'; /* Red X */
+            color: #FFFFFF;
+            font-size: 14px;
+        }
+
+        /* Dialog Actions */
+        .btn-secondary {
+            background-color: #6B7280;
+            color: #FFFFFF;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background-color: #4B5563;
+        }
+
+        .btn-danger {
+            background-color: #DC2626; /* Red color */
+            color: #FFFFFF;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-danger:hover {
+            background-color: #B91C1C; /* Darker red on hover */
+        }
     </style>
 </head>
 <body>
@@ -160,11 +298,41 @@
         <h1 style="text-align: center; margin-bottom: 20px;">Update Your Waitlist Information</h1>
         <div class="action-buttons">
             <p>Or</p>
-            <form method="POST" action="/waitlist/opt-out/{{ $opportunityId }}" style="display: inline;">
-                @csrf
-                <button type="submit" class="btn-danger">Remove Me From The List</button>
-            </form>
+            <button type="button" class="btn-danger" id="open-removal-dialog">Remove Me From The List</button>
         </div>
+
+        <!-- Waitlist Removal Dialog -->
+        <div id="removal-dialog" class="dialog-overlay" style="display: none;">
+            <div class="dialog-box">
+                <h2>Waitlist Removal</h2>
+                <p>Select the children that you would like to remove.</p>
+                <ul class="child-list">
+                    @foreach ($children as $index => $child)
+                        <li data-id="{{ $child['opportunity_id'] }}" class="child-row">
+                            <span class="child-name">{{ $child['first_name'] }} {{ $child['last_name'] }}</span>
+                            <span class="selection-indicator"></span>
+                        </li>
+                    @endforeach
+                </ul>
+                <div class="dialog-actions">
+                    <button type="button" class="btn-secondary" id="close-removal-dialog">Cancel</button>
+                    <button type="button" class="btn-danger" id="confirm-removal">Remove</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirmation Dialog -->
+        <div id="confirmation-dialog" class="dialog-overlay" style="display: none;">
+            <div class="dialog-box">
+                <h2>Confirm Removal</h2>
+                <p>Are you sure you want to remove the selected children from the waitlist?</p>
+                <div class="dialog-actions">
+                    <button type="button" class="btn-secondary" id="cancel-confirmation">Cancel</button>
+                    <button type="button" class="btn-danger" id="confirm-removal-final">Yes, Remove</button>
+                </div>
+            </div>
+        </div>
+
         <form method="POST" action="{{ route('waitlist.update', ['opportunityId' => $opportunityId]) }}" id="update-waitlist-form">
             @csrf
             <input type="hidden" name="opportunity_id" value="{{ $opportunityId }}">
@@ -288,6 +456,58 @@
             if (phoneInput && !phoneInput.value.startsWith('+')) {
                 phoneInput.value = '+1' + phoneInput.value.trim(); // Prepend +1 if no country code exists
             }
+        });
+
+        const removalDialog = document.getElementById('removal-dialog');
+        const confirmationDialog = document.getElementById('confirmation-dialog');
+        const openDialogButton = document.getElementById('open-removal-dialog');
+        const closeDialogButton = document.getElementById('close-removal-dialog');
+        const confirmRemovalButton = document.getElementById('confirm-removal');
+        const cancelConfirmationButton = document.getElementById('cancel-confirmation');
+        const confirmRemovalFinalButton = document.getElementById('confirm-removal-final');
+        const childRows = document.querySelectorAll('.child-row');
+
+        let selectedChildren = [];
+
+        openDialogButton.addEventListener('click', () => {
+            removalDialog.style.display = 'flex';
+        });
+
+        closeDialogButton.addEventListener('click', () => {
+            removalDialog.style.display = 'none';
+        });
+
+        childRows.forEach(row => {
+            row.addEventListener('click', () => {
+                row.classList.toggle('selected'); // Toggle selection
+            });
+        });
+
+        confirmRemovalButton.addEventListener('click', () => {
+            selectedChildren = Array.from(document.querySelectorAll('.child-row.selected'))
+                .map(row => row.getAttribute('data-id'));
+
+            if (selectedChildren.length === 0) {
+                alert('Please select at least one child to remove.');
+                return;
+            }
+
+            // Open the confirmation dialog
+            removalDialog.style.display = 'none';
+            confirmationDialog.style.display = 'flex';
+        });
+
+        cancelConfirmationButton.addEventListener('click', () => {
+            confirmationDialog.style.display = 'none';
+            removalDialog.style.display = 'flex'; // Reopen the removal dialog
+        });
+
+        confirmRemovalFinalButton.addEventListener('click', () => {
+            // Submit the selected children for removal (example: via AJAX or form submission)
+            console.log('Selected children for removal:', selectedChildren);
+
+            // Close the confirmation dialog
+            confirmationDialog.style.display = 'none';
         });
     </script>
 </body>
