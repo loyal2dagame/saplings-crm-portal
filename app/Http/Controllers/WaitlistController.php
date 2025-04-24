@@ -128,22 +128,24 @@ class WaitlistController extends Controller
             // Extract child-related opportunities
             $children = [];
             foreach ($opportunitiesXml->Opportunities->Opportunity as $childOpportunity) {
-                $children[] = [
-                    'opportunity_id' => (string) $childOpportunity->OpportunityID,
-                    'first_name' => isset($childOpportunity->CustomFields->CustomField[0]) && !empty($childOpportunity->CustomFields->CustomField[0]->FieldValue)
-                        ? (string) $childOpportunity->CustomFields->CustomField[0]->FieldValue
-                        : null, // Check if FieldValue is not empty
-                    'last_name' => isset($childOpportunity->CustomFields->CustomField[1]) && !empty($childOpportunity->CustomFields->CustomField[1]->FieldValue)
-                        ? (string) $childOpportunity->CustomFields->CustomField[1]->FieldValue
-                        : null, // Check if FieldValue is not empty
-                    'dob' => isset($childOpportunity->CustomFields->CustomField[2]) && !empty($childOpportunity->CustomFields->CustomField[2]->FieldValue)
-                        ? (string) $childOpportunity->CustomFields->CustomField[2]->FieldValue
-                        : null, // Check if FieldValue is not empty
-                    'start_date' => isset($childOpportunity->CustomFields->CustomField[3]) && !empty($childOpportunity->CustomFields->CustomField[3]->FieldValue)
-                        ? (string) $childOpportunity->CustomFields->CustomField[3]->FieldValue
-                        : null, // Check if FieldValue is not empty
-                    'gender' => '', // Gender is not provided in the response; leave blank or handle separately
-                ];
+                if ((string) $childOpportunity->PhaseID === '1') { // Check if PhaseID is 1
+                    $children[] = [
+                        'opportunity_id' => (string) $childOpportunity->OpportunityID,
+                        'first_name' => isset($childOpportunity->CustomFields->CustomField[0]) && !empty($childOpportunity->CustomFields->CustomField[0]->FieldValue)
+                            ? (string) $childOpportunity->CustomFields->CustomField[0]->FieldValue
+                            : null, // Check if FieldValue is not empty
+                        'last_name' => isset($childOpportunity->CustomFields->CustomField[1]) && !empty($childOpportunity->CustomFields->CustomField[1]->FieldValue)
+                            ? (string) $childOpportunity->CustomFields->CustomField[1]->FieldValue
+                            : null, // Check if FieldValue is not empty
+                        'dob' => isset($childOpportunity->CustomFields->CustomField[2]) && !empty($childOpportunity->CustomFields->CustomField[2]->FieldValue)
+                            ? (string) $childOpportunity->CustomFields->CustomField[2]->FieldValue
+                            : null, // Check if FieldValue is not empty
+                        'start_date' => isset($childOpportunity->CustomFields->CustomField[3]) && !empty($childOpportunity->CustomFields->CustomField[3]->FieldValue)
+                            ? (string) $childOpportunity->CustomFields->CustomField[3]->FieldValue
+                            : null, // Check if FieldValue is not empty
+                        'gender' => '', // Gender is not provided in the response; leave blank or handle separately
+                    ];
+                }
             }
             // Log the extracted children for debugging
             Log::info('Extracted Children:', ['children' => $children]);
@@ -322,10 +324,58 @@ class WaitlistController extends Controller
         }
     }
 
-    public function optOut($contactId)
+    public function optOut(Request $request)
     {
-        // Move the opportunity to the "close lost" phase in GreenRope
-        return redirect('/')->with('success', 'You have opted out of the waitlist.');
+        try {
+            $opportunityIds = $request->input('opportunityIds', []);
+            $phaseIdClosedLost = 6; // Phase ID for "Closed Lost"
+
+            if (empty($opportunityIds) || !is_array($opportunityIds)) {
+                return response()->json(['message' => 'No opportunities selected for opt-out.'], 400);
+            }
+
+            $authToken = $this->authenticate(); // Authenticate and get token
+
+            foreach ($opportunityIds as $opportunityId) {
+                $editOpportunityXml = "<EditOpportunitiesRequest>
+                    <Opportunities>
+                        <Opportunity opportunity_id=\"{$opportunityId}\">
+                            <PhaseID>{$phaseIdClosedLost}</PhaseID>
+                            <Quality>A</Quality>
+                            <CloseDate>20260101</CloseDate>
+                            <LostReason>Opt Out Waitlist</LostReason>
+                        </Opportunity>
+                    </Opportunities>
+                </EditOpportunitiesRequest>";
+
+                $response = Http::withOptions(['verify' => false])->asForm()->post('https://api.stgi.net/xml.pl', [
+                    'email' => $this->apiUsername,
+                    'auth_token' => $authToken,
+                    'xml' => $editOpportunityXml,
+                ]);
+
+                // Log the full API response to laravel.log
+                Log::info("Edit Opportunity API Response for Opportunity ID {$opportunityId}:", [
+                    'response_body' => $response->body(),
+                    'status_code' => $response->status(),
+                ]);
+
+                if (!$this->isValidXml($response->body())) {
+                    Log::error("Failed to update opportunity ID {$opportunityId}: Invalid XML response.");
+                    continue;
+                }
+
+                $responseXml = simplexml_load_string($response->body());
+                if (strtolower((string) $responseXml->Opportunities->Opportunity->Result) !== 'success') {
+                    Log::error("Failed to update opportunity ID {$opportunityId}: " . $response->body());
+                }
+            }
+
+            return response()->json(['message' => 'Selected opportunities have been opted out successfully.']);
+        } catch (\Exception $e) {
+            Log::error('Error in optOut method:', ['exception' => $e->getMessage()]);
+            return response()->json(['message' => 'An error occurred while processing the opt-out request.'], 500);
+        }
     }
 
     private function authenticate(): string

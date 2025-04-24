@@ -502,9 +502,33 @@
             removalDialog.style.display = 'flex'; // Reopen the removal dialog
         });
 
-        confirmRemovalFinalButton.addEventListener('click', () => {
-            // Submit the selected children for removal (example: via AJAX or form submission)
-            console.log('Selected children for removal:', selectedChildren);
+        confirmRemovalFinalButton.addEventListener('click', async () => {
+            if (selectedChildren.length === 0) {
+                alert('No children selected for removal.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/waitlist/opt-out', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}' // Include CSRF token for Laravel
+                    },
+                    body: JSON.stringify({ opportunityIds: selectedChildren })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert(result.message);
+                    location.reload(); // Reload the page to reflect changes
+                } else {
+                    alert(`Error: ${result.message}`);
+                }
+            } catch (error) {
+                console.error('Error during opt-out request:', error);
+                alert('An error occurred while processing your request.');
+            }
 
             // Close the confirmation dialog
             confirmationDialog.style.display = 'none';

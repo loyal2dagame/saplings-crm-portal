@@ -27,6 +27,8 @@ Route::get('/waitlist/update/{hashedOpportunityId}', [\App\Http\Controllers\Wait
 Route::post('/waitlist/update/{opportunityId}', [\App\Http\Controllers\WaitlistController::class, 'update'])->name('waitlist.update');
 Route::post('/waitlist/opt-out/{contactId}', [\App\Http\Controllers\WaitlistController::class, 'optOut']);
 
+Route::post('/waitlist/opt-out', [WaitlistController::class, 'optOut'])->name('waitlist.optOut');
+
 Route::get('/update-waitlist', [WaitlistController::class, 'edit'])->name('waitlist.edit');
 
 // Route::get('/get-custom-fields', [FormController::class, 'getCustomFields']);
