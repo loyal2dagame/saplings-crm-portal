@@ -419,6 +419,8 @@ class WaitlistController extends Controller
         $response = ['status' => 'Schedule executed'];
         if(isset($params['keysec']) && ($params['keysec'] == env('KEYSEC_VAL'))){
             Artisan::call('waitlist:send-reminders');
+            $log = Artisan::output();
+            $response['log'] = $log;
         }
         return response()->json($response, 200);
     }
