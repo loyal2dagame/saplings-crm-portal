@@ -1,7 +1,5 @@
 <?php
 
-ini_set('max_execution_time', getenv('SCRIPT_TIMEOUT') ?: 90); // Default to 30 seconds if not set
-
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
@@ -17,6 +15,8 @@ class SendWaitlistReminder extends Command
 
     public function handle()
     {
+        ini_set('max_execution_time', getenv('SCRIPT_TIMEOUT') ?: 90); // Default to 90 seconds if not set
+
         try {
             $apiUsername = env('GREENROPE_USERNAME');
             $apiPassword = env('GREENROPE_PASSWORD');
