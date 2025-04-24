@@ -16,6 +16,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('dashboard');
 });
 
+Route::get('run-waitlist-cron', [WaitlistController::class, 'waitlist_cron']);
+
 Route::post('/inquire', [FormController::class, 'handleInquiry']);
 Route::post('/waitlist', [FormController::class, 'handleWaitlist']);
 //Route::match(['get', 'post'], '/process-inquiry', [FormController::class, 'processInquiry'])->name('inquiry.process');

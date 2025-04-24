@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Artisan;
 
 class WaitlistController extends Controller
 {
@@ -361,5 +362,14 @@ class WaitlistController extends Controller
             return false;
         }
         return true;
+    }
+
+    private function waitlist_cron(Request $request){
+        $params = $request->all();
+        $response = ['status' => 'Schedule executed'];
+        if(isset($params['keysec']) && ($params['keysec'] == env('KEYSEC_VAL'))){
+            Artisan::call('waitlist:send-reminders');
+        }
+        return response()->json($response, 200);
     }
 }
