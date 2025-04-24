@@ -1,5 +1,7 @@
 <?php
 
+ini_set('max_execution_time', getenv('SCRIPT_TIMEOUT') ?: 90); // Default to 30 seconds if not set
+
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
