@@ -364,7 +364,7 @@ class WaitlistController extends Controller
         return true;
     }
 
-    private function waitlist_cron(Request $request){
+    public function waitlist_cron(Request $request){
         $params = $request->all();
         $response = ['status' => 'Schedule executed'];
         if(isset($params['keysec']) && ($params['keysec'] == env('KEYSEC_VAL'))){
