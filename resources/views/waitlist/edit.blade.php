@@ -288,6 +288,27 @@
         .btn-danger:hover {
             background-color: #B91C1C; /* Darker red on hover */
         }
+
+        /* Snackbar Notification */
+        #snackbar {
+            visibility: hidden;
+            min-width: 300px;
+            background-color: #4CAF50;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1000;
+            left: 50%;
+            bottom: 20px;
+            transform: translateX(-50%);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            font-size: 16px;
+            font-weight: 500;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
     </style>
 </head>
 <body>
@@ -458,81 +479,141 @@
             }
         });
 
-        const removalDialog = document.getElementById('removal-dialog');
-        const confirmationDialog = document.getElementById('confirmation-dialog');
-        const openDialogButton = document.getElementById('open-removal-dialog');
-        const closeDialogButton = document.getElementById('close-removal-dialog');
-        const confirmRemovalButton = document.getElementById('confirm-removal');
-        const cancelConfirmationButton = document.getElementById('cancel-confirmation');
-        const confirmRemovalFinalButton = document.getElementById('confirm-removal-final');
-        const childRows = document.querySelectorAll('.child-row');
+        document.addEventListener('DOMContentLoaded', () => {
+            const removalDialog = document.getElementById('removal-dialog');
+            const confirmationDialog = document.getElementById('confirmation-dialog');
+            const openDialogButton = document.getElementById('open-removal-dialog');
+            const closeDialogButton = document.getElementById('close-removal-dialog');
+            const confirmRemovalButton = document.getElementById('confirm-removal');
+            const cancelConfirmationButton = document.getElementById('cancel-confirmation');
+            const confirmRemovalFinalButton = document.getElementById('confirm-removal-final');
+            const childRows = document.querySelectorAll('.child-row');
+            const snackbar = document.getElementById('snackbar'); // Ensure snackbar is initialized after DOM is loaded
 
-        let selectedChildren = [];
+            if (!snackbar) {
+                console.error('Snackbar element not found in the DOM.');
+                return;
+            }
 
-        openDialogButton.addEventListener('click', () => {
-            removalDialog.style.display = 'flex';
-        });
+            let selectedChildren = [];
 
-        closeDialogButton.addEventListener('click', () => {
-            removalDialog.style.display = 'none';
-        });
+            openDialogButton.addEventListener('click', () => {
+                removalDialog.style.display = 'flex';
+            });
 
-        childRows.forEach(row => {
-            row.addEventListener('click', () => {
-                row.classList.toggle('selected'); // Toggle selection
+            closeDialogButton.addEventListener('click', () => {
+                removalDialog.style.display = 'none';
+            });
+
+            childRows.forEach(row => {
+                row.addEventListener('click', () => {
+                    row.classList.toggle('selected'); // Toggle selection
+                });
+            });
+
+            confirmRemovalButton.addEventListener('click', () => {
+                selectedChildren = Array.from(document.querySelectorAll('.child-row.selected'))
+                    .map(row => row.getAttribute('data-id'));
+
+                if (selectedChildren.length === 0) {
+                    alert('Please select at least one child to remove.');
+                    return;
+                }
+
+                // Open the confirmation dialog
+                removalDialog.style.display = 'none';
+                confirmationDialog.style.display = 'flex';
+            });
+
+            cancelConfirmationButton.addEventListener('click', () => {
+                confirmationDialog.style.display = 'none';
+                removalDialog.style.display = 'flex'; // Reopen the removal dialog
+            });
+
+            confirmRemovalFinalButton.addEventListener('click', async () => {
+                if (selectedChildren.length === 0) {
+                    // Show snackbar for no selection
+                    snackbar.textContent = 'No children selected for removal.';
+                    snackbar.style.backgroundColor = '#DC2626'; // Red background
+                    snackbar.style.visibility = 'visible'; // Ensure visibility
+                    snackbar.style.opacity = '1'; // Ensure opacity
+                    snackbar.classList.add('show');
+                    setTimeout(() => {
+                        snackbar.classList.remove('show');
+                        snackbar.style.opacity = '0'; // Reset opacity
+                        snackbar.style.visibility = 'hidden'; // Reset visibility
+                    }, 5000); // Hide after 5 seconds
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/waitlist/opt-out', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}' // Include CSRF token for Laravel
+                        },
+                        body: JSON.stringify({ opportunityIds: selectedChildren })
+                    });
+
+                    const result = await response.json();
+                    if (response.ok) {
+                        // Show success snackbar
+                        snackbar.textContent = 'The selected children have been successfully removed from the waitlist.';
+                        snackbar.style.backgroundColor = '#4CAF50'; // Green background
+                        snackbar.style.visibility = 'visible'; // Ensure visibility
+                        snackbar.style.opacity = '1'; // Ensure opacity
+                        snackbar.classList.add('show');
+                        setTimeout(() => {
+                            snackbar.classList.remove('show');
+                            snackbar.style.opacity = '0'; // Reset opacity
+                            snackbar.style.visibility = 'hidden'; // Reset visibility
+                        }, 5000); // Hide after 5 seconds
+
+                        // Close the confirmation dialog
+                        confirmationDialog.style.display = 'none';
+                    } else {
+                        // Show error snackbar
+                        snackbar.textContent = `Error: ${result.message}`;
+                        snackbar.style.backgroundColor = '#DC2626'; // Red background
+                        snackbar.style.visibility = 'visible'; // Ensure visibility
+                        snackbar.style.opacity = '1'; // Ensure opacity
+                        snackbar.classList.add('show');
+                        setTimeout(() => {
+                            snackbar.classList.remove('show');
+                            snackbar.style.opacity = '0'; // Reset opacity
+                            snackbar.style.visibility = 'hidden'; // Reset visibility
+                        }, 5000); // Hide after 5 seconds
+                    }
+                } catch (error) {
+                    console.error('Error during opt-out request:', error);
+                    // Show error snackbar
+                    snackbar.textContent = 'An error occurred while processing your request.';
+                    snackbar.style.backgroundColor = '#DC2626'; // Red background
+                    snackbar.style.visibility = 'visible'; // Ensure visibility
+                    snackbar.style.opacity = '1'; // Ensure opacity
+                    snackbar.classList.add('show');
+                    setTimeout(() => {
+                        snackbar.classList.remove('show');
+                        snackbar.style.opacity = '0'; // Reset opacity
+                        snackbar.style.visibility = 'hidden'; // Reset visibility
+                    }, 5000); // Hide after 5 seconds
+                }
             });
         });
 
-        confirmRemovalButton.addEventListener('click', () => {
-            selectedChildren = Array.from(document.querySelectorAll('.child-row.selected'))
-                .map(row => row.getAttribute('data-id'));
-
-            if (selectedChildren.length === 0) {
-                alert('Please select at least one child to remove.');
-                return;
-            }
-
-            // Open the confirmation dialog
-            removalDialog.style.display = 'none';
-            confirmationDialog.style.display = 'flex';
-        });
-
-        cancelConfirmationButton.addEventListener('click', () => {
-            confirmationDialog.style.display = 'none';
-            removalDialog.style.display = 'flex'; // Reopen the removal dialog
-        });
-
-        confirmRemovalFinalButton.addEventListener('click', async () => {
-            if (selectedChildren.length === 0) {
-                alert('No children selected for removal.');
-                return;
-            }
-
-            try {
-                const response = await fetch('/waitlist/opt-out', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}' // Include CSRF token for Laravel
-                    },
-                    body: JSON.stringify({ opportunityIds: selectedChildren })
-                });
-
-                const result = await response.json();
-                if (response.ok) {
-                    alert(result.message);
-                    location.reload(); // Reload the page to reflect changes
-                } else {
-                    alert(`Error: ${result.message}`);
+        // Ensure snackbar visibility resets properly
+        document.addEventListener('DOMContentLoaded', () => {
+            const snackbar = document.getElementById('snackbar');
+            snackbar.addEventListener('transitionend', () => {
+                if (!snackbar.classList.contains('show')) {
+                    snackbar.style.visibility = 'hidden';
                 }
-            } catch (error) {
-                console.error('Error during opt-out request:', error);
-                alert('An error occurred while processing your request.');
-            }
-
-            // Close the confirmation dialog
-            confirmationDialog.style.display = 'none';
+            });
         });
     </script>
+
+    <!-- Snackbar Notification -->
+    <div id="snackbar"></div>
 </body>
 </html>
