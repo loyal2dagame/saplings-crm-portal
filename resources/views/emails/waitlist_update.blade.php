@@ -53,7 +53,7 @@
         </div>
         <h1>You're Still on the Waitlist!</h1>
         <p>We wanted to let you know that you're still on the Saplings Early Learning Centres Waitlist. Please click the link below to update your information or to remove yourself from the list.</p>
-        <a href="{{ $updateLink }}" target="_blank">Update Information or Opt Out</a>
+        <a href="{{ $updateLink }}" target="_blank" style="display: inline-block; margin-top: 20px; padding: 10px 15px; background-color: #1976D2; color: #ffffff !important; text-decoration: none; border-radius: 4px;">Update Information or Opt Out</a>
         <p style="margin-top: 30px;">If you no longer wish to remain on the waitlist, you can opt out directly from the update page.</p>
     </div>
 </body>
