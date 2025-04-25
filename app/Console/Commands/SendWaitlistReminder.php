@@ -84,8 +84,8 @@ class SendWaitlistReminder extends Command
 
                     // Send email with the update link and custom "from" address
                     Mail::to($assignedToEmail)
-                        ->from('waitlist@saplingsearlylearning.com', 'Saplings Waitlist')
-                        ->send(new \App\Mail\WaitlistReminderMail($updateLink)); // Pass the link
+                        ->send((new \App\Mail\WaitlistReminderMail($updateLink))
+                            ->from('waitlist@saplingsearlylearning.com', 'Saplings Waitlist')); // Set "from" in the Mailable
 
                     Log::info('Email sent to:', ['email' => $assignedToEmail]); // Log email sent
                     echo "Email sent to: $assignedToEmail\n"; // Echo result to screen
