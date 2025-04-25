@@ -79,8 +79,14 @@ class SendWaitlistReminder extends Command
                 $hashedOpportunityId = Crypt::encryptString((string) $opportunity->OpportunityID);
 
                 try {
-                    // Send email
-                    Mail::to($assignedToEmail)->send(new \App\Mail\WaitlistReminderMail($hashedOpportunityId)); // Pass hashed ID
+                    // Generate the update link
+                    $updateLink = '<a href="https://inquiry.saplingsearlylearning.com/waitlist/update/' . $hashedOpportunityId . '" target="_blank">https://inquiry.saplingsearlylearning.com — Click to update</a>';
+
+                    // Send email with the update link and custom "from" address
+                    Mail::to($assignedToEmail)
+                        ->from('waitlist@saplingsearlylearning.com', 'Saplings Waitlist')
+                        ->send(new \App\Mail\WaitlistReminderMail($updateLink)); // Pass the link
+
                     Log::info('Email sent to:', ['email' => $assignedToEmail]); // Log email sent
                     echo "Email sent to: $assignedToEmail\n"; // Echo result to screen
 
