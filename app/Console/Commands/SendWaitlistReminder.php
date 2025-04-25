@@ -82,12 +82,12 @@ class SendWaitlistReminder extends Command
                     // Generate the update link
                     $updateLink = '<a href="https://inquiry.saplingsearlylearning.com/waitlist/update/' . $hashedOpportunityId . '" target="_blank" style="color: white; text-decoration: none; background-color: #007BFF; padding: 10px 20px; border-radius: 5px; display: inline-block;">Update Information or Opt Out</a>';
 
-                    // Add the logo using a table structure
+                    // Add the PNG logo using a table structure
                     $logo = '
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                       <tr>
                         <td align="center" style="padding: 20px 0;">
-                          <img src="https://saplingsearlylearning.com/images/Saplings_Logo_Linear.png"
+                          <img src="https://inquiry.saplingsearlylearning.com/images/Saplings_Logo_Linear_For_White.png"
                                alt="Saplings Early Learning Centres"
                                width="150"
                                height="40"
