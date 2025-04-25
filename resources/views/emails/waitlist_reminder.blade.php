@@ -49,7 +49,7 @@
 <body>
     <div class="container">
         <div class="logo">
-            <img src="{{ url('images/Saplings_Logo_Linear_For_White.svg') }}" alt="Saplings Logo">
+            <img src="{{ url('images/Saplings_Logo_Linear_For_White.png') }}" alt="Saplings Logo">
         </div>
         <h1>You're Still on the Waitlist!</h1>
         <p>We wanted to let you know that you're still on the Saplings Early Learning Centres Waitlist. Please click the link below to update your information or to remove yourself from the list.</p>
