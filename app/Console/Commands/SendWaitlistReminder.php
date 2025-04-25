@@ -83,6 +83,9 @@ class SendWaitlistReminder extends Command
                     Mail::to($assignedToEmail)->send(new \App\Mail\WaitlistReminderMail($hashedOpportunityId)); // Pass hashed ID
                     Log::info('Email sent to:', ['email' => $assignedToEmail]); // Log email sent
                     echo "Email sent to: $assignedToEmail\n"; // Echo result to screen
+
+                    // Log to a file
+                    file_put_contents(storage_path('logs/sent_emails.log'), "Email sent to: $assignedToEmail\n", FILE_APPEND);
                 } catch (\Exception $mailException) {
                     Log::error('Failed to send email:', [
                         'email' => $assignedToEmail,
