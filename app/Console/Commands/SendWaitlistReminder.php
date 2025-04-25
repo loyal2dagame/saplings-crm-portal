@@ -78,9 +78,18 @@ class SendWaitlistReminder extends Command
                 // Hash the opportunity ID
                 $hashedOpportunityId = Crypt::encryptString((string) $opportunity->OpportunityID);
 
-                // Send email
-                Mail::to($assignedToEmail)->send(new \App\Mail\WaitlistReminderMail($hashedOpportunityId)); // Pass hashed ID
-                Log::info('Email sent to:', ['email' => $assignedToEmail]); // Log email sent
+                try {
+                    // Send email
+                    Mail::to($assignedToEmail)->send(new \App\Mail\WaitlistReminderMail($hashedOpportunityId)); // Pass hashed ID
+                    Log::info('Email sent to:', ['email' => $assignedToEmail]); // Log email sent
+                    echo "Email sent to: $assignedToEmail\n"; // Echo result to screen
+                } catch (\Exception $mailException) {
+                    Log::error('Failed to send email:', [
+                        'email' => $assignedToEmail,
+                        'error' => $mailException->getMessage()
+                    ]);
+                    echo "Failed to send email to: $assignedToEmail. Error: " . $mailException->getMessage() . "\n"; // Echo error to screen
+                }
             }
 
             $this->info('Waitlist reminders sent successfully.');
