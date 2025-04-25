@@ -55,8 +55,8 @@ class SendWaitlistReminder extends Command
 
             foreach ($opportunitiesXml->Opportunities->Opportunity as $opportunity) {
                 // Filter by PhaseID
-                if ((string) $opportunity->PhaseID !== '1') {
-                    continue; // Skip if PhaseID is not 1
+                if ((string) $opportunity->PhaseID !== '17') {
+                    continue; // Skip if PhaseID is not 17
                 }
 
                 $assignedToEmail = (string) $opportunity->AssignedToEmail;

@@ -129,7 +129,7 @@ class WaitlistController extends Controller
             // Extract child-related opportunities
             $children = [];
             foreach ($opportunitiesXml->Opportunities->Opportunity as $childOpportunity) {
-                if ((string) $childOpportunity->PhaseID === '1') { // Check if PhaseID is 17
+                if ((string) $childOpportunity->PhaseID === '17') { // Check if PhaseID is 17
                     $children[] = [
                         'opportunity_id' => (string) $childOpportunity->OpportunityID,
                         'first_name' => isset($childOpportunity->CustomFields->CustomField[0]) && !empty($childOpportunity->CustomFields->CustomField[0]->FieldValue)
