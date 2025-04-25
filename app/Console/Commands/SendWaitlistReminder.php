@@ -75,33 +75,13 @@ class SendWaitlistReminder extends Command
 
                 $processedContacts[] = $assignedToEmail; // Mark contact as processed
 
-                // Hash the opportunity ID
-                $hashedOpportunityId = Crypt::encryptString((string) $opportunity->OpportunityID);
-
                 try {
-                    // Generate the update link
-                    $updateLink = '<a href="https://inquiry.saplingsearlylearning.com/waitlist/update/' . $hashedOpportunityId . '" target="_blank" style="color: white; text-decoration: none; background-color: #007BFF; padding: 10px 20px; border-radius: 5px; display: inline-block;">Update Information or Opt Out</a>';
+                    // Ensure $hashedOpportunityId only contains the encrypted ID
+                    $hashedOpportunityId = Crypt::encryptString((string) $opportunity->OpportunityID);
 
-                    // Add the PNG logo using a table structure
-                    $logo = '
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        <td align="center" style="padding: 20px 0;">
-                          <img src="https://inquiry.saplingsearlylearning.com/images/Saplings_Logo_Linear_For_White.png"
-                               alt="Saplings Early Learning Centres"
-                               width="150"
-                               height="40"
-                               style="display: block; width: 150px; height: auto; max-width: 100%;" />
-                        </td>
-                      </tr>
-                    </table>';
-
-                    // Combine the logo and update link into the email content
-                    $emailContent = $logo . '<br><br>' . $updateLink;
-
-                    // Send email with the logo and update link
+                    // Pass only the hashedOpportunityId to the Mailable
                     Mail::to($assignedToEmail)
-                        ->send((new \App\Mail\WaitlistReminderMail($emailContent))
+                        ->send((new \App\Mail\WaitlistReminderMail($hashedOpportunityId))
                             ->from('waitlist@saplingsearlylearning.com', 'Saplings Waitlist')); // Set "from" in the Mailable
 
                     Log::info('Email sent to:', ['email' => $assignedToEmail]); // Log email sent
