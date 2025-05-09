@@ -79,7 +79,7 @@ class FormController extends Controller
 
                 if (!$this->isValidXml($authResponse->body())) {
                     Log::error('Authentication failed: Non-XML response received.', ['response' => $authResponse->body()]);
-                    return response()->json(['error' => 'Authentication failed: Invalid response from GreenRope API.'], 500);
+                    return response()->json(['error' => 'Oops...it looks like something went wrong. Please try again.'], 500);
                 }
 
                 $authXml = simplexml_load_string($authResponse->body());
